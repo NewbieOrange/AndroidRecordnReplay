@@ -7,6 +7,11 @@ function record() {
         send('Key event intercepted: ' + event)
         return this.dispatchKeyEvent(event)
     });
+    instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
+        const location = this.getLastKnownLocation(provider)
+        send('Location event intercepted: ' + location)
+        return location
+    });
 }
 
 rpc.exports = {
