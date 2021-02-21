@@ -60,13 +60,6 @@ function record_sensor_listener(className) {
     })
 }
 
-function record_editable() {
-    instrument('android.text.Editable', 'dispatchKeyEvent', function (event) {
-        send(event.toString());
-        return this.dispatchKeyEvent(event);
-    });
-}
-
 function record() {
     record_touch('android.app.Activity');
     record_touch('android.app.Dialog');
