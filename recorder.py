@@ -1,5 +1,6 @@
 import sys
 
+from adbutils import adb
 import adbutils
 import frida
 
@@ -36,7 +37,11 @@ class Recorder:
 
 
 if __name__ == '__main__':
+    device = adb.device()
+    device.sync.push('lib/frida-server', '/data/local/tmp/frida-server')
+    device.shell('/data/local/tmp/frida-server &')
+
     session = frida.get_usb_device().attach('com.exatools.sensors')
-    recorder = Recorder(session)
+    recorder = Recorder(session, device)
     recorder.record()
     sys.stdin.read()  # pause for logs
