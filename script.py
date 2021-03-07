@@ -1,6 +1,6 @@
 import frida
 
-with open('utils.js', 'r') as f:
+with open('scripts/utils.js', 'r') as f:
     utils = f.read()
 
 

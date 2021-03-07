@@ -20,8 +20,8 @@ class Recorder:
         self.device.shell('getevent -tt > /data/local/tmp/recorded_events.txt')
 
     def record_frida(self):
-        with open('recorder.js', 'r') as f:
-            s = script.Script(session, f.read())
+        with open('scripts/recorder.js', 'r') as f:
+            s = script.Script(self.session, f.read())
         s.set_on_message(self.on_message)
         s.rpc.record()
 
