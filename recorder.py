@@ -51,7 +51,7 @@ def main():
         level=logging.INFO,
         format='%(message)s',
         handlers=[
-            logging.FileHandler('output.txt'),
+            logging.FileHandler('output.txt', 'r'),
             logging.StreamHandler(sys.stdout)
         ]
     )
@@ -60,9 +60,11 @@ def main():
     # device.sync.push('lib/frida-server', '/data/local/tmp/frida-server')
     # device.shell('/data/local/tmp/frida-server &')
 
-    session = frida.get_usb_device().attach('com.google.android.apps.messaging')
+    session = frida.get_usb_device().attach('com.google.android.deskclock')
     recorder = Recorder(session, device)
     recorder.record()
+
+    sys.stdin.read()
 
 
 if __name__ == '__main__':

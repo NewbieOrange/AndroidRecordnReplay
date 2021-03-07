@@ -33,7 +33,7 @@ function record_sensor_register() {
             }
         },
         onComplete() {
-            send('Sensor instrumentation finished')
+            send('-- Sensor instrumentation finished')
         }
     })
     instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
@@ -55,7 +55,7 @@ function record_sensor_listener(className) {
         sensorEvent.sensor = sensorField.get(event).toString()
         sensorEvent.accuracy = accuracyField.get(event).toString()
         sensorEvent.timestamp = timestampField.get(event).toString()
-        send(JSON.stringify(sensorEvent))
+        send('SensorEvent ' + JSON.stringify(sensorEvent))
         return this.onSensorChanged(event)
     })
 }
