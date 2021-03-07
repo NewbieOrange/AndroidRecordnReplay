@@ -51,7 +51,7 @@ def main():
         level=logging.INFO,
         format='%(message)s',
         handlers=[
-            logging.FileHandler('output.txt', 'r'),
+            logging.FileHandler('output.txt', 'w'),
             logging.StreamHandler(sys.stdout)
         ]
     )

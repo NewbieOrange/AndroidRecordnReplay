@@ -14,7 +14,8 @@ class Script:
         self.rpc = self.script.exports
 
     def on_message(self, msg, data):
-        self._on_message(msg, data)
+        if self._on_message:
+            self._on_message(msg, data)
 
     def set_on_message(self, callback):
         self._on_message = callback
