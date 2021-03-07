@@ -1,26 +1,64 @@
-function record_touch(typename) {
+function recordTouch(typename) {
     instrument(typename, 'dispatchTouchEvent', function (event) {
         send(event.toString());
         return this.dispatchTouchEvent(event);
     });
 }
 
-function record_key(typename) {
+function recordKey(typename) {
     instrument(typename, 'dispatchKeyEvent', function (event) {
         send(event.toString());
         return this.dispatchKeyEvent(event);
     });
 }
 
-function record_location() {
+function recordLocation() {
+    // 1. instrument active location polling
     instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
         const location = this.getLastKnownLocation(provider)
         send(location.toString())
         return location
     });
+    // 2. instrument loaded passive location listeners
+    const classClass = Java.use('java.lang.Class')
+    const classLocationListener = classClass.forName('android.location.LocationListener')
+    Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+        onMatch(name, handle) {
+            if (!name.startsWith('android.')) { // skip Android library classes
+                const classHandle = Java.cast(handle, classClass)
+                if (classLocationListener.isAssignableFrom(classHandle)) {
+                    recordLocationListener(name)
+                }
+            }
+        },
+        onComplete() {
+            send('-- Location instrumentation finished')
+        }
+    })
+    // 3. instrument future passive location listener
+    instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
+        recordLocationListener(listener.$className)
+        return this.requestLocationUpdates(provider, minTime, minDistance, listener)
+    });
 }
 
-function record_sensor_register() {
+function recordLocationListener(className) {
+    instrument(className, 'onLocationChanged', function (location) {
+        const locationResult = {
+            longitude: location.getLongitude(),
+            latitude: location.getLatitude(),
+            bearing: location.getBearing(),
+            speed: location.getSpeed(),
+            altitude: location.getAltitude(),
+            accuracy: location.getAccuracy(),
+            listener: className
+        }
+        send('LocationResult ' + JSON.stringify(locationResult))
+        return this.onLocationChanged(location)
+    })
+}
+
+function recordSensorRegister() {
     const classClass = Java.use('java.lang.Class')
     const classSensorEventListener = classClass.forName('android.hardware.SensorEventListener')
     Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
@@ -28,7 +66,7 @@ function record_sensor_register() {
             if (!name.startsWith('android.')) { // skip Android library classes
                 const classHandle = Java.cast(handle, classClass)
                 if (classSensorEventListener.isAssignableFrom(classHandle)) {
-                    record_sensor_listener(name)
+                    recordSensorListener(name)
                 }
             }
         },
@@ -37,12 +75,12 @@ function record_sensor_register() {
         }
     })
     instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
-        record_sensor_listener(listener.$className)
+        recordSensorListener(listener.$className)
         return this.registerListener(listener, sensor, period)
     });
 }
 
-function record_sensor_listener(className) {
+function recordSensorListener(className) {
     const classClass = Java.use('java.lang.Class')
     const classSensorEvent = classClass.forName('android.hardware.SensorEvent')
     const valuesField = classSensorEvent.getDeclaredField('values')
@@ -55,18 +93,19 @@ function record_sensor_listener(className) {
         sensorEvent.sensor = sensorField.get(event).toString()
         sensorEvent.accuracy = accuracyField.get(event).toString()
         sensorEvent.timestamp = timestampField.get(event).toString()
+        sensorEvent.listener = className
         send('SensorEvent ' + JSON.stringify(sensorEvent))
         return this.onSensorChanged(event)
     })
 }
 
 function record() {
-    record_touch('android.app.Activity');
-    record_touch('android.app.Dialog');
-    record_key('android.app.Activity');
-    record_key('android.app.Dialog');
-    record_location();
-    record_sensor_register();
+    recordTouch('android.app.Activity');
+    recordTouch('android.app.Dialog');
+    recordKey('android.app.Activity');
+    recordKey('android.app.Dialog');
+    recordLocation();
+    recordSensorRegister();
 }
 
 rpc.exports = {
