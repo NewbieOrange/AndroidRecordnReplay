@@ -1,3 +1,4 @@
+import logging
 import sys
 
 from adbutils import adb
@@ -11,13 +12,11 @@ class Recorder:
     def __init__(self, session: frida.core.Session, device: adbutils.AdbDevice):
         self.session = session
         self.device = device
+        self.stream = None
 
     def record(self):
-        self.record_events()
         self.record_frida()
-
-    def record_events(self):
-        self.device.shell('getevent -tt > /data/local/tmp/recorded_events.txt')
+        self.record_events()
 
     def record_frida(self):
         with open('scripts/recorder.js', 'r') as f:
@@ -25,27 +24,46 @@ class Recorder:
         s.set_on_message(self.on_message)
         s.rpc.record()
 
-    def extract_events(self):
-        self.device.sync.pull('/data/local/tmp/recorded_events.txt', 'recorded_events.txt')
+    def record_events(self):
+        self.stream = self.device.shell('getevent -tt', stream=True)
+        while True:
+            buffer = b''
+            while True:
+                ch = self.stream.conn.recv(1)
+                if not ch or ch == b'\n':
+                    break
+                buffer += ch
+            logging.info(buffer.decode())
 
     def on_message(self, msg: dict, _):
         if msg['type'] == 'send':
-            print(msg['payload'])
+            logging.info(msg['payload'])
         else:
-            print(msg)
+            logging.info(msg)
 
     def close(self):
-        print('closed')
         self.session.detach()
+        self.stream.close()
+
+
+def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        handlers=[
+            logging.FileHandler('output.txt'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+    device = adb.device()
+    # device.sync.push('lib/frida-server', '/data/local/tmp/frida-server')
+    # device.shell('/data/local/tmp/frida-server &')
+
+    session = frida.get_usb_device().attach('com.google.android.apps.messaging')
+    recorder = Recorder(session, device)
+    recorder.record()
 
 
 if __name__ == '__main__':
-    device = adb.device()
-    device.sync.push('lib/frida-server', '/data/local/tmp/frida-server')
-    device.shell('/data/local/tmp/frida-server &')
-
-    session = frida.get_usb_device().attach('com.exatools.sensors')
-    recorder = Recorder(session, device)
-    recorder.record()
-    recorder.extract_events()
-    sys.stdin.read()  # pause for logs
+    main()
