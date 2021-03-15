@@ -16,7 +16,7 @@ function replayCollectViews() {
     send('-- Collect views instrument finished')
 }
 
-const MotionEvent = classForName('android.view.MotionEvent');
+const MotionEvent = Class.forName('android.view.MotionEvent');
 const obtain = MotionEvent.getMethod('obtain', [long, long, int, float, float, int])
 
 function replayMotionEvent(viewSignature, data) {

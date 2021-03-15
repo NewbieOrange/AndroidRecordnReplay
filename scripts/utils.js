@@ -1,3 +1,11 @@
+const Class = Java.use("java.lang.Class");
+const long = Class.getPrimitiveClass('long');
+const int = Class.getPrimitiveClass('int');
+const float = Class.getPrimitiveClass('float');
+const Long = Java.use('java.lang.Long')
+const Integer = Java.use('java.lang.Integer')
+const Float = Java.use('java.lang.Float')
+
 function instrumentOverload(typename, funcname, overload, impl) {
     Java.perform(() => {
         const type = Java.use(typename);
@@ -12,14 +20,9 @@ function instrument(typename, funcname, impl) {
     })
 }
 
-function classForName(classname) {
-    const classClass = Java.use('java.lang.Class')
-    return classClass.forName(classname)
-}
-
 function getViewFullSignature(view) {
     const ViewGroup = Java.use('android.view.ViewGroup')
-    const ViewGroupHandle = classForName('android.view.ViewGroup')
+    const ViewGroupHandle = Class.forName('android.view.ViewGroup')
     let result = ''
     for (let i = 0; i < 5; i++) {
         if (view !== null) {
@@ -38,11 +41,10 @@ function getViewFullSignature(view) {
 }
 
 function getViewSignature(view) {
-    const TextViewWrap = Java.use('android.widget.TextView')
-    const TextView = classForName('android.widget.TextView')
+    const TextView = Java.use('android.widget.TextView')
     let extra = ''
-    if (TextView.isInstance(view)) {
-        extra = Java.cast(view, TextViewWrap).getText()
+    if (TextView.class.isInstance(view)) {
+        extra = Java.cast(view, TextView).getText()
     }
     return view.getId() + ',' + extra + '@' + view.getClass().getName()
 }
@@ -70,11 +72,3 @@ function dumpJavaObject(object) {
     })
     return jsObject
 }
-
-const VMClassLoader = Java.use("java.lang.Class");
-const long = VMClassLoader.getPrimitiveClass('long');
-const int = VMClassLoader.getPrimitiveClass('int');
-const float = VMClassLoader.getPrimitiveClass('float');
-const Long = Java.use('java.lang.Long')
-const Integer = Java.use('java.lang.Integer')
-const Float = Java.use('java.lang.Float')
