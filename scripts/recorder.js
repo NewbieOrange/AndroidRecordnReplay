@@ -119,6 +119,7 @@ function record() {
     recordTouch('android.view.View');
     recordKey('android.view.View');
     recordTouchDispatch('android.view.ViewGroup')
+    recordKey('android.view.ViewGroup');
     recordLocation();
     recordSensorRegister();
     send('-- Record ready!');

@@ -43,7 +43,7 @@ class Replayer:
                 sleep_time = (int(key['eventTime']) - event_time) / 1000 if event_time else 0
                 print('sleep for ' + str(sleep_time) + 'sec')
                 time.sleep(sleep_time)
-                # TODO: send KeyEvent
+                self.u2_device.press(key['keyCode'][len('KEYCODE_'):])
             elif event.startswith('LocationResult'):
                 self.replay_location(event)
 
