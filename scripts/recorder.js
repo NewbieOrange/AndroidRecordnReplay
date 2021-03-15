@@ -1,7 +1,19 @@
+const earlyInstrument = true;
+
 function recordTouch(typename) {
+    instrument(typename, 'onTouchEvent', function (event) {
+        send(event.toString() + ' ' + getViewFullSignature(this));
+        return this.onTouchEvent(event);
+    });
+}
+
+function recordTouchDispatch(typename) {
     instrument(typename, 'dispatchTouchEvent', function (event) {
-        send(event.toString());
-        return this.dispatchTouchEvent(event);
+        const dispatchedByView = this.dispatchTouchEvent(event)
+        if (!dispatchedByView) {
+            send(event.toString() + ' ' + getViewFullSignature(this));
+        }
+        return dispatchedByView;
     });
 }
 
@@ -20,21 +32,23 @@ function recordLocation() {
         return location
     });
     // 2. instrument loaded passive location listeners
-    const classClass = Java.use('java.lang.Class')
-    const classLocationListener = classClass.forName('android.location.LocationListener')
-    Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
-        onMatch(name, handle) {
-            if (!name.startsWith('android.')) { // skip Android library classes
-                const classHandle = Java.cast(handle, classClass)
-                if (classLocationListener.isAssignableFrom(classHandle)) {
-                    recordLocationListener(name)
+    if (!earlyInstrument) {
+        const classClass = Java.use('java.lang.Class')
+        const classLocationListener = classClass.forName('android.location.LocationListener')
+        Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+            onMatch(name, handle) {
+                if (!name.startsWith('android.')) { // skip Android library classes
+                    const classHandle = Java.cast(handle, classClass)
+                    if (classLocationListener.isAssignableFrom(classHandle)) {
+                        recordLocationListener(name)
+                    }
                 }
+            },
+            onComplete() {
+                send('-- Location instrumentation finished')
             }
-        },
-        onComplete() {
-            send('-- Location instrumentation finished')
-        }
-    })
+        })
+    }
     // 3. instrument future passive location listener
     instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
         recordLocationListener(listener.$className)
@@ -59,21 +73,23 @@ function recordLocationListener(className) {
 }
 
 function recordSensorRegister() {
-    const classClass = Java.use('java.lang.Class')
-    const classSensorEventListener = classClass.forName('android.hardware.SensorEventListener')
-    Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
-        onMatch(name, handle) {
-            if (!name.startsWith('android.')) { // skip Android library classes
-                const classHandle = Java.cast(handle, classClass)
-                if (classSensorEventListener.isAssignableFrom(classHandle)) {
-                    recordSensorListener(name)
+    if (!earlyInstrument) {
+        const classClass = Java.use('java.lang.Class')
+        const classSensorEventListener = classClass.forName('android.hardware.SensorEventListener')
+        Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+            onMatch(name, handle) {
+                if (!name.startsWith('android.')) { // skip Android library classes
+                    const classHandle = Java.cast(handle, classClass)
+                    if (classSensorEventListener.isAssignableFrom(classHandle)) {
+                        recordSensorListener(name)
+                    }
                 }
+            },
+            onComplete() {
+                send('-- Sensor instrumentation finished')
             }
-        },
-        onComplete() {
-            send('-- Sensor instrumentation finished')
-        }
-    })
+        })
+    }
     instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
         recordSensorListener(listener.$className)
         return this.registerListener(listener, sensor, period)
@@ -100,12 +116,12 @@ function recordSensorListener(className) {
 }
 
 function record() {
-    recordTouch('android.app.Activity');
-    recordTouch('android.app.Dialog');
-    recordKey('android.app.Activity');
-    recordKey('android.app.Dialog');
+    recordTouch('android.view.View');
+    recordKey('android.view.View');
+    recordTouchDispatch('android.view.ViewGroup')
     recordLocation();
     recordSensorRegister();
+    send('-- Record ready!');
 }
 
 rpc.exports = {

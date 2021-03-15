@@ -16,7 +16,7 @@ class Recorder:
 
     def record(self):
         self.record_frida()
-        self.record_events()
+        # self.record_events()
 
     def record_frida(self):
         with open('scripts/recorder.js', 'r') as f:
@@ -56,13 +56,13 @@ def main():
         ]
     )
 
-    device = adb.device()
-    # device.sync.push('lib/frida-server', '/data/local/tmp/frida-server')
-    # device.shell('/data/local/tmp/frida-server &')
-
-    session = frida.get_usb_device().attach('com.google.android.deskclock')
-    recorder = Recorder(session, device)
+    frida_device = frida.get_usb_device()
+    pid = frida_device.spawn('com.android.settings')
+    session = frida_device.attach(pid)
+    adb_device = adb.device()
+    recorder = Recorder(session, adb_device)
     recorder.record()
+    frida_device.resume(pid)
 
     sys.stdin.read()
 
