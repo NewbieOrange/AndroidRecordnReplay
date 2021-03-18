@@ -61,6 +61,7 @@ def main():
     frida_device = frida.get_usb_device()
     pid = frida_device.spawn('com.android.settings')
     session = frida_device.attach(pid)
+    session.enable_jit()
     u2_device = u2.connect()
 
     replayer = Replayer(session, frida_device, pid, u2_device)

@@ -59,6 +59,7 @@ def main():
     frida_device = frida.get_usb_device()
     pid = frida_device.spawn('com.android.settings')
     session = frida_device.attach(pid)
+    session.enable_jit()
     adb_device = adb.device()
     recorder = Recorder(session, adb_device)
     recorder.record()
