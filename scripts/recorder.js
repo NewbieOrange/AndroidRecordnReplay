@@ -2,7 +2,20 @@ const earlyInstrument = true;
 
 function recordTouch(typename) {
     instrument(typename, 'onTouchEvent', function (event) {
-        send(event.toString() + ' ' + getViewFullSignature(this));
+        if (isTopLevelDispatcher(this)) {
+            send(JSON.stringify({
+                event: 'MotionEvent',
+                downTime: event.getDownTime(),
+                eventTime: event.getEventTime(),
+                action: event.getActionMasked(),
+                rawX: event.getRawX(),
+                rawY: event.getRawY(),
+                x: event.getX(),
+                y: event.getY(),
+                metaState: event.getMetaState(),
+                view: getViewFullSignature(this)
+            }))
+        }
         return this.onTouchEvent(event);
     });
 }
@@ -10,8 +23,19 @@ function recordTouch(typename) {
 function recordTouchDispatch(typename) {
     instrument(typename, 'dispatchTouchEvent', function (event) {
         const dispatchedByView = this.dispatchTouchEvent(event)
-        if (!dispatchedByView) {
-            send(event.toString() + ' ' + getViewFullSignature(this));
+        if (isTopLevelDispatcher(this)) {
+            send(JSON.stringify({
+                event: 'MotionEvent',
+                downTime: event.getDownTime(),
+                eventTime: event.getEventTime(),
+                action: event.getActionMasked(),
+                rawX: event.getRawX(),
+                rawY: event.getRawY(),
+                x: event.getX(),
+                y: event.getY(),
+                metaState: event.getMetaState(),
+                view: getViewFullSignature(this)
+            }))
         }
         return dispatchedByView;
     });
@@ -19,7 +43,22 @@ function recordTouchDispatch(typename) {
 
 function recordKey(typename) {
     instrument(typename, 'dispatchKeyEvent', function (event) {
-        send(event.toString());
+        if (isTopLevelDispatcher(this)) {
+            send(JSON.stringify({
+                event: 'KeyEvent',
+                downTime: event.getDownTime(),
+                eventTime: event.getEventTime(),
+                action: event.getAction(),
+                code: event.getKeyCode(),
+                repeat: event.getRepeatCount(),
+                metaState: event.getMetaState(),
+                deviceId: event.getDeviceId(),
+                scancode: event.getScanCode(),
+                flags: event.getFlags(),
+                source: event.getSource(),
+                view: getViewFullSignature(this)
+            }));
+        }
         return this.dispatchKeyEvent(event);
     });
 }
