@@ -9,28 +9,53 @@ function replayCollectViews() {
         this.draw(canvas);
         views.set(getViewFullSignature(this), Java.retain(this));
     });
+    instrumentOverload('android.view.View', 'setVisibility', ['int'], function (visibility) {
+        this.setVisibility(visibility);
+        if (visibility === 0) {
+            views.set(getViewFullSignature(this), Java.retain(this))
+        } else {
+            views.delete(getViewFullSignature(this));
+        }
+    });
     send('-- Collect views instrument finished')
 }
 
 const MotionEvent = Java.use('android.view.MotionEvent')
 const KeyEvent = Java.use('android.view.KeyEvent')
 
-function replayMotionEvent(viewSignature, data) {
+function replayMotionEvent(event) {
+    const viewSignature = event['view']
     const view = views.get(viewSignature)
     if (view) {
         //const location = Java.array('int', [0, 0])
         //view.getLocationOnScreen(location)
-        send('find view! ')
-        Java.perform(function () {
-            Java.scheduleOnMainThread(function () {
-                const action = data['action'] === 'ACTION_DOWN' ? 0 : (data['action'] === 'ACTION_UP' ? 1 : 2)
-                const args = Java.array('java.lang.Object', [Long.$new(data['eventTime']), Long.$new(data['downTime']), Integer.$new(action), Float.$new(data['x[0]']), Float.$new(data['y[0]']), Integer.$new(0)])
-                const motionEvent = obtain.invoke(null, args)
-                send('send motionevent! ' + motionEvent)
-                view.onTouchEvent(motionEvent)
-            })
+        send('find view!')
+        Java.scheduleOnMainThread(function () {
+            const motionEvent = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'int')
+                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], event['x'], event['y'], event['metaState'])
+            // send('send motionevent! ' + motionEvent)
+            view.dispatchTouchEvent(motionEvent)
         })
+    } else {
+        send('view not found! ' + viewSignature)
     }
+    return view !== undefined
+}
+
+function replayKeyEvent(event) {
+    const viewSignature = event['view']
+    const view = views.get(viewSignature)
+    if (view) {
+        send('find view!')
+        Java.scheduleOnMainThread(function () {
+            const keyEvent = KeyEvent.$new.overload('long', 'long', 'int', 'int', 'int', 'int', 'int', 'int', 'int', 'int')
+                .call(KeyEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], event['code'], event['repeat'], event['metaState'], event['deviceId'], event['scancode'], event['flags'], event['source'])
+            view.dispatchKeyEvent(keyEvent)
+        })
+    } else {
+        send('view not found! ' + viewSignature)
+    }
+    return view !== undefined
 }
 
 function replayLocationActive(data) {
@@ -83,6 +108,7 @@ function replaySensor(className, event) {
 rpc.exports = {
     replayCollectViews,
     replayMotionEvent,
+    replayKeyEvent,
     replayLocationActive,
     replayLocationPassive,
     replaySensor
