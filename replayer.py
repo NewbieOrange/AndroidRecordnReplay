@@ -41,11 +41,11 @@ class Replayer:
             if event['event'] == 'MotionEvent':
                 if not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
                     if event['action'] == 0:
-                        self.u2_device.touch.down(*self.adjust_coord(event['rawX'], event['rawY']))
+                        self.u2_device.touch.down(*self.adjust_raw_coord(event['rawX'], event['rawY']))
                     elif event['action'] == 1:
-                        self.u2_device.touch.up(*self.adjust_coord(event['rawX'], event['rawY']))
+                        self.u2_device.touch.up(*self.adjust_raw_coord(event['rawX'], event['rawY']))
                     elif event['action'] == 2:
-                        self.u2_device.touch.move(*self.adjust_coord(event['rawX'], event['rawY']))
+                        self.u2_device.touch.move(*self.adjust_raw_coord(event['rawX'], event['rawY']))
             elif event['event'] == 'KeyEvent':
                 if not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
                     if event['action'] == 0:
@@ -55,7 +55,7 @@ class Replayer:
             last_time = event_time
         time.sleep(1)
 
-    def adjust_coord(self, x, y):
+    def adjust_raw_coord(self, x, y):
         return x * self.screen_width / self.original_screen_width, y * self.screen_height / self.original_screen_height
 
     def on_message(self, msg: dict, _):

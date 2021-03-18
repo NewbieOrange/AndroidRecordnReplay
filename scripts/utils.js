@@ -20,7 +20,12 @@ function instrument(typename, funcname, impl) {
 }
 
 function getViewFullSignature(view) {
-    let result = getViewActivity(view) + ';'
+    let result = ''
+    const activity = getViewActivity(view)
+    if (activity) {
+        result += activity.getTitle()
+    }
+    result += ';'
     // if (ViewGroup.class.isInstance(view)) {
     //     const viewGroup = Java.cast(view, ViewGroup)
     //     result += '('
@@ -81,8 +86,7 @@ function getViewActivity(view) {
     let context = view.getContext()
     while (ContextWrapper.class.isInstance(context)) {
         if (Activity.class.isInstance(context)) {
-            const activity = Java.cast(context, Activity)
-            return activity.getTitle()
+            return Java.cast(context, Activity)
         }
         context = Java.cast(context, ContextWrapper).getBaseContext()
     }
@@ -91,6 +95,13 @@ function getViewActivity(view) {
 
 function isTopLevelDispatcher(view) {
     return !ViewGroup.class.isInstance(view.getParent())
+}
+
+function adjustCoordinates(view, x, y, originalWidth, originalHeight) {
+    return {
+        x: x * view.getWidth() / originalWidth,
+        y: y * view.getHeight() / originalHeight
+    }
 }
 
 function insert(string, index, value) {

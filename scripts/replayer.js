@@ -31,8 +31,9 @@ function replayMotionEvent(event) {
         //view.getLocationOnScreen(location)
         send('find view!')
         Java.scheduleOnMainThread(function () {
+            const adjustedCoord = adjustCoordinates(view, event['x'], event['y'], event['width'], event['height'])
             const motionEvent = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'int')
-                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], event['x'], event['y'], event['metaState'])
+                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], adjustedCoord.x, adjustedCoord.y, event['metaState'])
             // send('send motionevent! ' + motionEvent)
             view.dispatchTouchEvent(motionEvent)
         })

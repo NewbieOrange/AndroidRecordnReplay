@@ -13,7 +13,9 @@ function recordTouch(typename) {
                 x: event.getX(),
                 y: event.getY(),
                 metaState: event.getMetaState(),
-                view: getViewFullSignature(this)
+                view: getViewFullSignature(this),
+                width: this.getWidth(),
+                height: this.getHeight()
             }))
         }
         return this.onTouchEvent(event);
@@ -34,7 +36,9 @@ function recordTouchDispatch(typename) {
                 x: event.getX(),
                 y: event.getY(),
                 metaState: event.getMetaState(),
-                view: getViewFullSignature(this)
+                view: getViewFullSignature(this),
+                width: this.getWidth(),
+                height: this.getHeight()
             }))
         }
         return dispatchedByView;
