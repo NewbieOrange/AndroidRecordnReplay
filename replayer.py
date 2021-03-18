@@ -13,6 +13,8 @@ class Replayer:
         self.frida_device = frida_device
         self.pid = pid
         self.u2_device = u2_device
+        self.screen_width, self.screen_height = u2_device.window_size()
+        self.original_screen_width, self.original_screen_height = None, None
         with open('scripts/replayer.js', 'r') as f:
             s = script.Script(self.session, f.read())
         s.set_on_message(self.on_message)
@@ -29,6 +31,9 @@ class Replayer:
             if not event.startswith('{'):
                 continue
             event = json.loads(event)
+            if event['event'] == 'DeviceInfo':
+                self.original_screen_width, self.original_screen_height = event['x'], event['y']
+                continue
             print(event)
             event_time = int(event['eventTime'])
             sleep_time = (event_time - last_time) / 1000 if last_time else 0
@@ -36,11 +41,11 @@ class Replayer:
             if event['event'] == 'MotionEvent':
                 if not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
                     if event['action'] == 0:
-                        self.u2_device.touch.down(event['rawX'], event['rawY'])
+                        self.u2_device.touch.down(*self.adjust_coord(event['rawX'], event['rawY']))
                     elif event['action'] == 1:
-                        self.u2_device.touch.up(event['rawX'], event['rawY'])
+                        self.u2_device.touch.up(*self.adjust_coord(event['rawX'], event['rawY']))
                     elif event['action'] == 2:
-                        self.u2_device.touch.move(event['rawX'], event['rawY'])
+                        self.u2_device.touch.move(*self.adjust_coord(event['rawX'], event['rawY']))
             elif event['event'] == 'KeyEvent':
                 if not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
                     if event['action'] == 0:
@@ -49,6 +54,9 @@ class Replayer:
                 self.rpc.replay_location(event)
             last_time = event_time
         time.sleep(1)
+
+    def adjust_coord(self, x, y):
+        return x * self.screen_width / self.original_screen_width, y * self.screen_height / self.original_screen_height
 
     def on_message(self, msg: dict, _):
         if msg['type'] == 'send':

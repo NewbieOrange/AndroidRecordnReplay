@@ -15,8 +15,13 @@ class Recorder:
         self.stream = None
 
     def record(self):
+        self.record_device_info()
         self.record_frida()
         # self.record_events()
+
+    def record_device_info(self):
+        screen_width, screen_height = self.device.window_size()
+        logging.info('{"x": %s, "y": %s}' % (screen_width, screen_height))
 
     def record_frida(self):
         with open('scripts/recorder.js', 'r') as f:
