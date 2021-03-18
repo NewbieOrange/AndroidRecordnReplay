@@ -1,4 +1,5 @@
 import time
+import json
 
 import frida
 import uiautomator2 as u2
@@ -20,37 +21,34 @@ class Replayer:
     def replay(self, data):
         self.rpc.replay_collect_views()
         self.frida_device.resume(self.pid)
-        event_time = None
-        time.sleep(5)
+        last_time = None
+        for i in reversed(range(0, 5)):
+            print('-- wait for views: %d' % i)
+            time.sleep(1)
         for event in data:
-            if event.startswith('MotionEvent'):
-                event, view = event.rsplit(' ', 1)
-                motion = dict(token.split('=') for token in event[len('MotionEvent { '):-len(' }')].split(', '))
-                sleep_time = (int(motion['eventTime']) - event_time) / 1000 if event_time else 0
-                print('sleep for ' + str(sleep_time) + 'sec')
-                time.sleep(sleep_time)
-                self.rpc.replay_motion_event(view, motion)
-                # if motion['action'] == 'ACTION_DOWN':
-                #     self.device.touch.down(float(motion['x[0]']), float(motion['y[0]']))
-                # elif motion['action'] == 'ACTION_UP':
-                #     self.device.touch.up(float(motion['x[0]']), float(motion['y[0]']))
-                # elif motion['action'] == 'ACTION_MOVE':
-                #     self.device.touch.move(float(motion['x[0]']), float(motion['y[0]']))
-                event_time = int(motion['eventTime'])
-            elif event.startswith('KeyEvent'):
-                key = dict(token.split('=') for token in event[len('KeyEvent { '):-len(' }')].split(', '))
-                print(key)
-                sleep_time = (int(key['eventTime']) - event_time) / 1000 if event_time else 0
-                print('sleep for ' + str(sleep_time) + 'sec')
-                time.sleep(sleep_time)
-                self.u2_device.press(key['keyCode'][len('KEYCODE_'):])
+            if not event.startswith('{'):
+                continue
+            event = json.loads(event)
+            print(event)
+            event_time = int(event['eventTime'])
+            sleep_time = (event_time - last_time) / 1000 if last_time else 0
+            time.sleep(sleep_time)
+            if event['event'] == 'MotionEvent':
+                if not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
+                    if event['action'] == 0:
+                        self.u2_device.touch.down(event['rawX'], event['rawY'])
+                    elif event['action'] == 1:
+                        self.u2_device.touch.up(event['rawX'], event['rawY'])
+                    elif event['action'] == 2:
+                        self.u2_device.touch.move(event['rawX'], event['rawY'])
+            elif event['event'] == 'KeyEvent':
+                if not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
+                    if event['action'] == 0:
+                        self.u2_device.keyevent(event['code'])
             elif event.startswith('LocationResult'):
-                self.replay_location(event)
-
-    def replay_location(self, event):
-        location = eval(event[len('LocationResult '):])
-        print(location)
-        # self.rpc.replay_location_passive(location['listener'], location)
+                self.rpc.replay_location(event)
+            last_time = event_time
+        time.sleep(1)
 
     def on_message(self, msg: dict, _):
         if msg['type'] == 'send':
