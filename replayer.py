@@ -66,7 +66,7 @@ def main():
     u2_device = u2.connect()
 
     replayer = Replayer(session, frida_device, pid, u2_device)
-    with open('output.txt', 'r') as f:
+    with open('output.txt', 'r', encoding='utf-8') as f:
         replayer.replay(f.read().splitlines())
 
 
