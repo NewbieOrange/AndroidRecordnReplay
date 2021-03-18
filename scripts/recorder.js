@@ -1,4 +1,4 @@
-const earlyInstrument = true;
+const earlyInstrument = true
 
 function recordTouch(typename) {
     instrument(typename, 'onTouchEvent', function (event) {
@@ -72,12 +72,11 @@ function recordLocation() {
     });
     // 2. instrument loaded passive location listeners
     if (!earlyInstrument) {
-        const classClass = Java.use('java.lang.Class')
-        const classLocationListener = classClass.forName('android.location.LocationListener')
+        const classLocationListener = Class.forName('android.location.LocationListener')
         Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
             onMatch(name, handle) {
                 if (!name.startsWith('android.')) { // skip Android library classes
-                    const classHandle = Java.cast(handle, classClass)
+                    const classHandle = Java.cast(handle, Class)
                     if (classLocationListener.isAssignableFrom(classHandle)) {
                         recordLocationListener(name)
                     }
@@ -113,13 +112,12 @@ function recordLocationListener(className) {
 
 function recordSensorRegister() {
     if (!earlyInstrument) {
-        const classClass = Java.use('java.lang.Class')
-        const classSensorEventListener = classClass.forName('android.hardware.SensorEventListener')
+        const SensorEventListener = Java.use('android.hardware.SensorEventListener')
         Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
             onMatch(name, handle) {
                 if (!name.startsWith('android.')) { // skip Android library classes
-                    const classHandle = Java.cast(handle, classClass)
-                    if (classSensorEventListener.isAssignableFrom(classHandle)) {
+                    const classHandle = Java.cast(handle, Class)
+                    if (SensorEventListener.isAssignableFrom(classHandle)) {
                         recordSensorListener(name)
                     }
                 }
@@ -136,12 +134,11 @@ function recordSensorRegister() {
 }
 
 function recordSensorListener(className) {
-    const classClass = Java.use('java.lang.Class')
-    const classSensorEvent = classClass.forName('android.hardware.SensorEvent')
-    const valuesField = classSensorEvent.getDeclaredField('values')
-    const sensorField = classSensorEvent.getDeclaredField('sensor')
-    const accuracyField = classSensorEvent.getDeclaredField('accuracy')
-    const timestampField = classSensorEvent.getDeclaredField('timestamp')
+    const SensorEvent = Java.use('android.hardware.SensorEvent')
+    const valuesField = SensorEvent.getDeclaredField('values')
+    const sensorField = SensorEvent.getDeclaredField('sensor')
+    const accuracyField = SensorEvent.getDeclaredField('accuracy')
+    const timestampField = SensorEvent.getDeclaredField('timestamp')
     instrument(className, 'onSensorChanged', function (event) {
         const sensorEvent = Object()
         sensorEvent.values = javaArrayToString(Java.array('float', valuesField.get(event)))

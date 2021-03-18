@@ -2,22 +2,18 @@ let views = new Map()
 
 function replayCollectViews() {
     instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
-        const viewSignature = getViewFullSignature(this);
-        //send('onDraw ' + viewSignature);
-        views.set(viewSignature, Java.retain(this));
-        return this.onDraw(canvas);
+        this.onDraw(canvas);
+        views.set(getViewFullSignature(this), Java.retain(this));
     });
     instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
-        const viewSignature = getViewFullSignature(this);
-        //send('draw ' + viewSignature);
-        views.set(viewSignature, Java.retain(this));
-        return this.draw(canvas);
+        this.draw(canvas);
+        views.set(getViewFullSignature(this), Java.retain(this));
     });
     send('-- Collect views instrument finished')
 }
 
-const MotionEvent = Class.forName('android.view.MotionEvent');
-const obtain = MotionEvent.getMethod('obtain', [long, long, int, float, float, int])
+const MotionEvent = Java.use('android.view.MotionEvent')
+const KeyEvent = Java.use('android.view.KeyEvent')
 
 function replayMotionEvent(viewSignature, data) {
     const view = views.get(viewSignature)
