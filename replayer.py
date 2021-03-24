@@ -1,5 +1,6 @@
 import time
 import json
+import sys
 
 import frida
 import uiautomator2 as u2
@@ -24,7 +25,7 @@ class Replayer:
         self.rpc.replay_collect_views()
         self.frida_device.resume(self.pid)
         last_time = None
-        for i in reversed(range(0, 5)):
+        for i in reversed(range(0, 3)):
             print('-- wait for views: %d' % i)
             time.sleep(1)
         for event in data:
@@ -34,10 +35,11 @@ class Replayer:
             if event['event'] == 'DeviceInfo':
                 self.original_screen_width, self.original_screen_height = event['x'], event['y']
                 continue
-            print(event)
+            # print(event)
             event_time = int(event['eventTime'])
             sleep_time = (event_time - last_time) / 1000 if last_time else 0
-            time.sleep(sleep_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
             if event['event'] == 'MotionEvent':
                 if not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
                     if event['action'] == 0:
@@ -49,7 +51,7 @@ class Replayer:
             elif event['event'] == 'KeyEvent':
                 if not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
                     if event['action'] == 0:
-                        self.u2_device.keyevent(event['code'])
+                        self.u2_device.keyevent(str(event['code']))
             elif event.startswith('LocationResult'):
                 self.rpc.replay_location(event)
             last_time = event_time
@@ -67,13 +69,13 @@ class Replayer:
 
 def main():
     frida_device = frida.get_usb_device()
-    pid = frida_device.spawn('com.android.settings')
+    pid = frida_device.spawn(sys.argv[2])
     session = frida_device.attach(pid)
     session.enable_jit()
     u2_device = u2.connect()
 
     replayer = Replayer(session, frida_device, pid, u2_device)
-    with open('output.txt', 'r', encoding='utf-8') as f:
+    with open(sys.argv[1], 'r', encoding='utf-8') as f:
         replayer.replay(f.read().splitlines())
 
 

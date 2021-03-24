@@ -2,47 +2,29 @@ const earlyInstrument = true
 
 function recordTouch(typename) {
     instrument(typename, 'onTouchEvent', function (event) {
-        if (isTopLevelDispatcher(this)) {
-            send(JSON.stringify({
-                event: 'MotionEvent',
-                downTime: event.getDownTime(),
-                eventTime: event.getEventTime(),
-                action: event.getActionMasked(),
-                rawX: event.getRawX(),
-                rawY: event.getRawY(),
-                x: event.getX(),
-                y: event.getY(),
-                metaState: event.getMetaState(),
-                view: getViewFullSignature(this),
-                width: this.getWidth(),
-                height: this.getHeight()
-            }))
-        }
-        return this.onTouchEvent(event);
-    });
-}
-
-function recordTouchDispatch(typename) {
-    instrument(typename, 'dispatchTouchEvent', function (event) {
-        const dispatchedByView = this.dispatchTouchEvent(event)
-        if (isTopLevelDispatcher(this)) {
-            send(JSON.stringify({
-                event: 'MotionEvent',
-                downTime: event.getDownTime(),
-                eventTime: event.getEventTime(),
-                action: event.getActionMasked(),
-                rawX: event.getRawX(),
-                rawY: event.getRawY(),
-                x: event.getX(),
-                y: event.getY(),
-                metaState: event.getMetaState(),
-                view: getViewFullSignature(this),
-                width: this.getWidth(),
-                height: this.getHeight()
-            }))
-        }
-        return dispatchedByView;
-    });
+        send(JSON.stringify({
+            event: 'MotionEvent',
+            entry: 'onTouchEvent',
+            downTime: event.getDownTime(),
+            eventTime: event.getEventTime(),
+            action: event.getActionMasked(),
+            rawX: event.getRawX(),
+            rawY: event.getRawY(),
+            x: event.getX(),
+            y: event.getY(),
+            pressure: event.getPressure(),
+            size: event.getSize(),
+            metaState: event.getMetaState(),
+            xPrecision: event.getXPrecision(),
+            yPrecision: event.getYPrecision(),
+            deviceId: event.getDeviceId(),
+            edgeFlags: event.getEdgeFlags(),
+            view: getViewFullSignature(this),
+            width: this.getWidth(),
+            height: this.getHeight()
+        }))
+        return this.onTouchEvent(event)
+    })
 }
 
 function recordKey(typename) {
@@ -63,7 +45,7 @@ function recordKey(typename) {
                 view: getViewFullSignature(this)
             }));
         }
-        return this.dispatchKeyEvent(event);
+        return this.dispatchKeyEvent(event)
     });
 }
 
@@ -156,13 +138,12 @@ function recordSensorListener(className) {
 }
 
 function record() {
-    recordTouch('android.view.View');
-    recordKey('android.view.View');
-    recordTouchDispatch('android.view.ViewGroup')
-    recordKey('android.view.ViewGroup');
-    recordLocation();
-    recordSensorRegister();
-    send('-- Record ready!');
+    recordTouch('android.view.View')
+    recordKey('android.view.View')
+    recordKey('android.view.ViewGroup')
+    recordLocation()
+    recordSensorRegister()
+    send('-- Record ready!')
 }
 
 rpc.exports = {

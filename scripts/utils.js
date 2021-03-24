@@ -40,8 +40,8 @@ function getViewParentSignature(view, depth) {
         if (ViewGroup.class.isInstance(viewParent)) {
             const viewGroup = Java.cast(viewParent, ViewGroup)
             result += '('
-            for (let i = 0; i < viewGroup.getChildCount(); i++) {
-                const child = viewGroup.getChildAt(i)
+            for (let j = 0; j < viewGroup.getChildCount(); j++) {
+                const child = viewGroup.getChildAt(j)
                 if (view.equals(child)) {
                     result += './'
                 } else {
@@ -58,20 +58,20 @@ function getViewParentSignature(view, depth) {
 }
 
 function getViewFullSignature(view) {
-    let result = ''
-    const activity = getViewActivity(view)
-    if (activity) {
-        result += activity.getTitle()
-    }
-    return result + '|' + getViewChildSignature(view, 2) + ';' + getViewParentSignature(view, 3)
+    // let result = ''
+    // const activity = getViewActivity(view)
+    // if (activity) {
+    //     result += activity.getTitle()
+    // }
+    return getViewSignature(view) + '$' + getViewChildSignature(view, 2) + '+' + getViewParentSignature(view, 5)
 }
 
 function getViewSignature(view) {
-    let extra = view.getTag() + ',' + view.getTooltipText() + ',' + view.getVisibility()
+    let extra = ''
     // if (TextView.class.isInstance(view)) {
-    //     extra = Java.cast(view, TextView).getText()
+    //     extra += ',' + Java.cast(view, TextView).getText()
     // }
-    return view.getId() + ',' + extra + '@' + view.getClass().getName()
+    return view.getId() + extra + '@' + view.getClass().getName()
 }
 
 function getViewActivity(view) {
@@ -87,6 +87,16 @@ function getViewActivity(view) {
 
 function isTopLevelDispatcher(view) {
     return !ViewGroup.class.isInstance(view.getParent())
+}
+
+function isLastLevelDispatcher(viewGroup) {
+    if (viewGroup['getChildCount'] === undefined) return false
+    for (let i = 0; i < viewGroup.getChildCount(); i++) {
+        if (ViewGroup.class.isInstance(viewGroup.getChildAt(i))) {
+            return false
+        }
+    }
+    return true
 }
 
 function adjustCoordinates(view, x, y, originalWidth, originalHeight) {
