@@ -36,7 +36,7 @@ function replayMotionEvent(event) {
                 .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
                     event['action'], adjustedCoord.x, adjustedCoord.y, event['pressure'], event['size'],
                     event['metaState'], event['xPrecision'], event['yPrecision'], event['deviceId'], event['edgeFlags'])
-            view[event['entry']](motionEvent)
+            view.onTouchEvent(motionEvent)
         })
     } else {
         send('view not found!')

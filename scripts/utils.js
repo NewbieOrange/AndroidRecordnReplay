@@ -90,7 +90,6 @@ function isTopLevelDispatcher(view) {
 }
 
 function isLastLevelDispatcher(viewGroup) {
-    if (viewGroup['getChildCount'] === undefined) return false
     for (let i = 0; i < viewGroup.getChildCount(); i++) {
         if (ViewGroup.class.isInstance(viewGroup.getChildAt(i))) {
             return false

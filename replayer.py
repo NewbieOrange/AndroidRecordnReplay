@@ -9,7 +9,8 @@ import script
 
 
 class Replayer:
-    def __init__(self, session: frida.core.Session, frida_device: frida.core.Device, pid, u2_device: u2.Device):
+    def __init__(self, raw: bool, session: frida.core.Session, frida_device: frida.core.Device, pid, u2_device: u2.Device):
+        self.raw = raw
         self.session = session
         self.frida_device = frida_device
         self.pid = pid
@@ -25,7 +26,7 @@ class Replayer:
         self.rpc.replay_collect_views()
         self.frida_device.resume(self.pid)
         last_time = None
-        for i in reversed(range(0, 3)):
+        for i in reversed(range(0, 10)):
             print('-- wait for views: %d' % i)
             time.sleep(1)
         for event in data:
@@ -41,7 +42,7 @@ class Replayer:
             if sleep_time > 0:
                 time.sleep(sleep_time)
             if event['event'] == 'MotionEvent':
-                if not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
+                if self.raw or not self.rpc.replay_motion_event(event):  # widget failed, fallback to coord
                     if event['action'] == 0:
                         self.u2_device.touch.down(*self.adjust_raw_coord(event['rawX'], event['rawY']))
                     elif event['action'] == 1:
@@ -49,7 +50,7 @@ class Replayer:
                     elif event['action'] == 2:
                         self.u2_device.touch.move(*self.adjust_raw_coord(event['rawX'], event['rawY']))
             elif event['event'] == 'KeyEvent':
-                if not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
+                if self.raw or not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
                     if event['action'] == 0:
                         self.u2_device.keyevent(str(event['code']))
             elif event.startswith('LocationResult'):
@@ -74,7 +75,7 @@ def main():
     session.enable_jit()
     u2_device = u2.connect()
 
-    replayer = Replayer(session, frida_device, pid, u2_device)
+    replayer = Replayer(False, session, frida_device, pid, u2_device)
     with open(sys.argv[1], 'r', encoding='utf-8') as f:
         replayer.replay(f.read().splitlines())
 

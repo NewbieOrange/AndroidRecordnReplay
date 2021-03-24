@@ -1,30 +1,82 @@
 const earlyInstrument = true
 
+function sendMotionEvent(view, event) {
+    send(JSON.stringify({
+        event: 'MotionEvent',
+        downTime: event.getDownTime(),
+        eventTime: event.getEventTime(),
+        action: event.getActionMasked(),
+        rawX: event.getRawX(),
+        rawY: event.getRawY(),
+        x: event.getX(),
+        y: event.getY(),
+        pressure: event.getPressure(),
+        size: event.getSize(),
+        metaState: event.getMetaState(),
+        xPrecision: event.getXPrecision(),
+        yPrecision: event.getYPrecision(),
+        deviceId: event.getDeviceId(),
+        edgeFlags: event.getEdgeFlags(),
+        view: getViewFullSignature(view),
+        width: view.getWidth(),
+        height: view.getHeight()
+    }))
+}
+
+let onTouchListeners = {}
+let instrumentedViews = {}
+
+function RegisterClassOnTouchListener() {
+    return Java.registerClass({
+        name: 'xyz.chengzi.OnTouchListener',
+        implements: [Java.use('android.view.View$OnTouchListener')],
+        fields: {
+            view: 'android.view.View'
+        },
+        methods: {
+            onTouch: function (v, event) {
+                sendMotionEvent(v, event)
+                const onTouchListener = onTouchListeners[v.hashCode()]
+                if (onTouchListener) {
+                    return onTouchListener.onTouch(v, event)
+                } else {
+                    return false
+                }
+            }
+        }
+    })
+}
+
+let onTouchListenerStub = undefined
+
 function recordTouch(typename) {
     instrument(typename, 'onTouchEvent', function (event) {
-        send(JSON.stringify({
-            event: 'MotionEvent',
-            entry: 'onTouchEvent',
-            downTime: event.getDownTime(),
-            eventTime: event.getEventTime(),
-            action: event.getActionMasked(),
-            rawX: event.getRawX(),
-            rawY: event.getRawY(),
-            x: event.getX(),
-            y: event.getY(),
-            pressure: event.getPressure(),
-            size: event.getSize(),
-            metaState: event.getMetaState(),
-            xPrecision: event.getXPrecision(),
-            yPrecision: event.getYPrecision(),
-            deviceId: event.getDeviceId(),
-            edgeFlags: event.getEdgeFlags(),
-            view: getViewFullSignature(this),
-            width: this.getWidth(),
-            height: this.getHeight()
-        }))
+        sendMotionEvent(this, event)
         return this.onTouchEvent(event)
     })
+    // instrument('android.view.View', 'setOnTouchListener', function (listener) {
+    //     if (!onTouchListenerStub.equals(listener)) {
+    //         onTouchListeners[this.hashCode()] = Java.retain(listener)
+    //     } else {
+    //         this.setOnTouchListener(listener)
+    //     }
+    // })
+    // instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
+    //     this.onDraw(canvas)
+    //     if (!instrumentedViews[this.hashCode()]) {
+    //         this.setOnTouchListener(onTouchListenerStub)
+    //     } else {
+    //         instrumentedViews[this.hashCode()] = 0
+    //     }
+    // })
+    // instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
+    //     this.draw(canvas)
+    //     if (!instrumentedViews[this.hashCode()]) {
+    //         this.setOnTouchListener(onTouchListenerStub)
+    //     } else {
+    //         instrumentedViews[this.hashCode()] = 0
+    //     }
+    // })
 }
 
 function recordKey(typename) {
@@ -138,6 +190,10 @@ function recordSensorListener(className) {
 }
 
 function record() {
+    Java.perform(() => {
+        const ClassOnTouchListener = RegisterClassOnTouchListener()
+        onTouchListenerStub = ClassOnTouchListener.$new()
+    })
     recordTouch('android.view.View')
     recordKey('android.view.View')
     recordKey('android.view.ViewGroup')
