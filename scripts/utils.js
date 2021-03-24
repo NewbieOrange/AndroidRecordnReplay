@@ -19,39 +19,22 @@ function instrument(typename, funcname, impl) {
     Java.use(typename)[funcname].implementation = impl;
 }
 
-function getViewFullSignature(view) {
-    let result = ''
-    const activity = getViewActivity(view)
-    if (activity) {
-        result += activity.getTitle()
+function getViewChildSignature(view, depth) {
+    if (depth === 0 || !ViewGroup.class.isInstance(view)) {
+        return getViewSignature(view)
+    } else {
+        const viewGroup = Java.cast(view, ViewGroup)
+        let result = getViewSignature(view) + '('
+        for (let i = 0; i < viewGroup.getChildCount(); i++) {
+            result += getViewChildSignature(viewGroup.getChildAt(i), depth - 1) + '/'
+        }
+        return result + ')'
     }
-    result += ';'
-    // if (ViewGroup.class.isInstance(view)) {
-    //     const viewGroup = Java.cast(view, ViewGroup)
-    //     result += '('
-    //     for (let i = 0; i < viewGroup.getChildCount(); i++) {
-    //         result += getViewSignature(viewGroup.getChildAt(i)) + '/'
-    //         if (ViewGroup.class.isInstance(viewGroup.getChildAt(i))) {
-    //             const viewGroup2 = Java.cast(viewGroup.getChildAt(i), ViewGroup)
-    //             result += '('
-    //             for (let i = 0; i < viewGroup2.getChildCount(); i++) {
-    //                 result += getViewSignature(viewGroup2.getChildAt(i)) + '/'
-    //                 if (ViewGroup.class.isInstance(viewGroup2.getChildAt(i))) {
-    //                     const viewGroup3 = Java.cast(viewGroup2.getChildAt(i), ViewGroup)
-    //                     result += '('
-    //                     for (let i = 0; i < viewGroup3.getChildCount(); i++) {
-    //                         result += getViewSignature(viewGroup3.getChildAt(i)) + '/'
-    //                     }
-    //                     result += ')'
-    //                 }
-    //             }
-    //             result += ')'
-    //         }
-    //     }
-    //     result += ')'
-    // }
-    result += ';'
-    for (let i = 0; view && i < 3; i++) {
+}
+
+function getViewParentSignature(view, depth) {
+    let result = ''
+    for (let i = 0; view && i < depth; i++) {
         result += View.class.isInstance(view) ? getViewSignature(view) + '/' : '?'
         let viewParent = view.getParent()
         if (ViewGroup.class.isInstance(viewParent)) {
@@ -72,6 +55,15 @@ function getViewFullSignature(view) {
         }
     }
     return result
+}
+
+function getViewFullSignature(view) {
+    let result = ''
+    const activity = getViewActivity(view)
+    if (activity) {
+        result += activity.getTitle()
+    }
+    return result + '|' + getViewChildSignature(view, 2) + ';' + getViewParentSignature(view, 3)
 }
 
 function getViewSignature(view) {
