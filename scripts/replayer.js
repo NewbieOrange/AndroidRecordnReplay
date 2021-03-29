@@ -1,22 +1,22 @@
-let views = new Map()
+let views = {}
 
 function replayCollectViews() {
     instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
         this.onDraw(canvas);
-        views.set(getViewFullSignature(this), Java.retain(this));
-    });
+        views[getViewFullSignature(this)] = Java.retain(this);
+    })
     instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
         this.draw(canvas);
-        views.set(getViewFullSignature(this), Java.retain(this));
-    });
+        views[getViewFullSignature(this)] = Java.retain(this);
+    })
     instrumentOverload('android.view.View', 'setVisibility', ['int'], function (visibility) {
         this.setVisibility(visibility);
         if (visibility === 0) {
-            views.set(getViewFullSignature(this), Java.retain(this))
+            views[getViewFullSignature(this)] = Java.retain(this);
         } else {
-            views.delete(getViewFullSignature(this));
+            delete views[getViewFullSignature(this)];
         }
-    });
+    })
     send('-- Collect views instrument finished')
 }
 
@@ -25,36 +25,39 @@ const KeyEvent = Java.use('android.view.KeyEvent')
 
 function replayMotionEvent(event) {
     const viewSignature = event['view']
-    const view = views.get(viewSignature)
+    const view = views[viewSignature]
     if (view) {
         //const location = Java.array('int', [0, 0])
         //view.getLocationOnScreen(location)
         send('find view!')
         Java.scheduleOnMainThread(function () {
             const adjustedCoord = adjustCoordinates(view, event['x'], event['y'], event['width'], event['height'])
-            const motionEvent = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'int')
-                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], adjustedCoord.x, adjustedCoord.y, event['metaState'])
-            // send('send motionevent! ' + motionEvent)
-            view.dispatchTouchEvent(motionEvent)
+            const motionEvent = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'float', 'float', 'int', 'float', 'float', 'int', 'int')
+                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
+                    event['action'], adjustedCoord.x, adjustedCoord.y, event['pressure'], event['size'],
+                    event['metaState'], event['xPrecision'], event['yPrecision'], event['deviceId'], event['edgeFlags'])
+            view.onTouchEvent(motionEvent)
         })
     } else {
-        send('view not found! ' + viewSignature)
+        send('view not found!')
     }
     return view !== undefined
 }
 
 function replayKeyEvent(event) {
     const viewSignature = event['view']
-    const view = views.get(viewSignature)
+    const view = views[viewSignature]
     if (view) {
         send('find view!')
         Java.scheduleOnMainThread(function () {
             const keyEvent = KeyEvent.$new.overload('long', 'long', 'int', 'int', 'int', 'int', 'int', 'int', 'int', 'int')
-                .call(KeyEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']), event['action'], event['code'], event['repeat'], event['metaState'], event['deviceId'], event['scancode'], event['flags'], event['source'])
+                .call(KeyEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
+                    event['action'], event['code'], event['repeat'], event['metaState'], event['deviceId'],
+                    event['scancode'], event['flags'], event['source'])
             view.dispatchKeyEvent(keyEvent)
         })
     } else {
-        send('view not found! ' + viewSignature)
+        send('view not found!')
     }
     return view !== undefined
 }

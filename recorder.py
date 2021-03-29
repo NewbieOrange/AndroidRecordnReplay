@@ -21,7 +21,7 @@ class Recorder:
 
     def record_device_info(self):
         screen_width, screen_height = self.device.window_size()
-        logging.info('{"x": %s, "y": %s}' % (screen_width, screen_height))
+        logging.info('{"event": "DeviceInfo", "x": %s, "y": %s}' % (screen_width, screen_height))
 
     def record_frida(self):
         with open('scripts/recorder.js', 'r') as f:
@@ -56,13 +56,13 @@ def main():
         level=logging.INFO,
         format='%(message)s',
         handlers=[
-            logging.FileHandler('output.txt', 'w', encoding='utf-8'),
+            logging.FileHandler(sys.argv[1], 'w', encoding='utf-8'),
             logging.StreamHandler(sys.stdout)
         ]
     )
 
     frida_device = frida.get_usb_device()
-    pid = frida_device.spawn('com.android.settings')
+    pid = frida_device.spawn(sys.argv[2])
     session = frida_device.attach(pid)
     session.enable_jit()
     adb_device = adb.device()
