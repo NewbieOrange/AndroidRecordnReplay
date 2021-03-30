@@ -1,22 +1,22 @@
 let views = {}
 
 function replayCollectViews() {
-    instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
-        this.onDraw(canvas);
-        views[getViewFullSignature(this)] = Java.retain(this);
-    })
     instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
-        this.draw(canvas);
-        views[getViewFullSignature(this)] = Java.retain(this);
+        this.draw(canvas)
+        views[getViewFullSignature(this)] = Java.retain(this)
     })
-    instrumentOverload('android.view.View', 'setVisibility', ['int'], function (visibility) {
-        this.setVisibility(visibility);
-        if (visibility === 0) {
-            views[getViewFullSignature(this)] = Java.retain(this);
-        } else {
-            delete views[getViewFullSignature(this)];
-        }
+    instrumentOverload('android.view.View', 'dispatchDraw', ['android.graphics.Canvas'], function (canvas) {
+        this.dispatchDraw(canvas)
+        views[getViewFullSignature(this)] = Java.retain(this)
     })
+    // instrumentOverload('android.view.View', 'setVisibility', ['int'], function (visibility) {
+    //     this.setVisibility(visibility)
+    //     if (visibility === 0) {
+    //         views[getViewFullSignature(this)] = Java.retain(this)
+    //     // } else {
+    //         // delete views[getViewFullSignature(this)]
+    //     }
+    // })
     send('-- Collect views instrument finished')
 }
 
@@ -48,7 +48,7 @@ function replayKeyEvent(event) {
     const viewSignature = event['view']
     const view = views[viewSignature]
     if (view) {
-        send('find view!')
+        // send('find view!')
         Java.scheduleOnMainThread(function () {
             const keyEvent = KeyEvent.$new.overload('long', 'long', 'int', 'int', 'int', 'int', 'int', 'int', 'int', 'int')
                 .call(KeyEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
@@ -56,8 +56,8 @@ function replayKeyEvent(event) {
                     event['scancode'], event['flags'], event['source'])
             view.dispatchKeyEvent(keyEvent)
         })
-    } else {
-        send('view not found!')
+    // } else {
+    //     send('view not found!')
     }
     return view !== undefined
 }
