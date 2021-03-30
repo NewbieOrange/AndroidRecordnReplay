@@ -36,12 +36,11 @@ function RegisterClassOnTouchListener() {
         methods: {
             onTouch: function (v, event) {
                 const onTouchListener = onTouchListeners[v.hashCode()]
+                sendMotionEvent(v, event)
                 if (onTouchListener) {
                     return onTouchListener.onTouch(v, event)
-                } else {
-                    sendMotionEvent(v, event)
-                    return false
                 }
+                return false
             }
         }
     })
@@ -50,33 +49,37 @@ function RegisterClassOnTouchListener() {
 let onTouchListenerStub = undefined
 
 function recordTouch(typename) {
-    // instrument(typename, 'onTouchEvent', function (event) {
-    //     sendMotionEvent(this, event)
-    //     return this.onTouchEvent(event)
-    // })
-    instrument('android.view.View', 'setOnTouchListener', function (listener) {
+    instrumentOverload(typename, '$init', ['android.content.Context'], function (context) {
+        this.setOnTouchListener(onTouchListenerStub)
+        return this.$init(context)
+    })
+    instrument(typename, 'setOnTouchListener', function (listener) {
         if (!onTouchListenerStub.equals(listener)) {
             onTouchListeners[this.hashCode()] = Java.retain(listener)
         } else {
             this.setOnTouchListener(listener)
         }
     })
-    instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
-        this.onDraw(canvas)
-        if (!instrumentedViews[this.hashCode()]) {
-            this.setOnTouchListener(onTouchListenerStub)
-        } else {
-            instrumentedViews[this.hashCode()] = true
-        }
-    })
-    instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
-        this.draw(canvas)
-        if (!instrumentedViews[this.hashCode()]) {
-            this.setOnTouchListener(onTouchListenerStub)
-        } else {
-            instrumentedViews[this.hashCode()] = true
-        }
-    })
+    // instrument(typename, 'onTouchEvent', function (event) {
+    //     sendMotionEvent(this, event)
+    //     return this.onTouchEvent(event)
+    // })
+    // instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
+    //     this.onDraw(canvas)
+    //     if (!instrumentedViews[this.hashCode()]) {
+    //         this.setOnTouchListener(onTouchListenerStub)
+    //     } else {
+    //         instrumentedViews[this.hashCode()] = true
+    //     }
+    // })
+    // instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
+    //     this.draw(canvas)
+    //     if (!instrumentedViews[this.hashCode()]) {
+    //         this.setOnTouchListener(onTouchListenerStub)
+    //     } else {
+    //         instrumentedViews[this.hashCode()] = true
+    //     }
+    // })
 }
 
 function recordKey(typename) {
