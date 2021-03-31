@@ -26,7 +26,7 @@ class Replayer:
         self.rpc.replay_collect_views()
         self.frida_device.resume(self.pid)
         last_time = None
-        for i in reversed(range(0, 10)):
+        for i in reversed(range(0, 3)):
             print('-- wait for views: %d' % i)
             time.sleep(1)
         for event in data:

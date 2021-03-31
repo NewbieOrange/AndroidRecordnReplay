@@ -23,6 +23,23 @@ function sendMotionEvent(view, event) {
     }))
 }
 
+function sendKeyEvent(view, event) {
+    send(JSON.stringify({
+        event: 'KeyEvent',
+        downTime: event.getDownTime(),
+        eventTime: event.getEventTime(),
+        action: event.getAction(),
+        code: event.getKeyCode(),
+        repeat: event.getRepeatCount(),
+        metaState: event.getMetaState(),
+        deviceId: event.getDeviceId(),
+        scancode: event.getScanCode(),
+        flags: event.getFlags(),
+        source: event.getSource(),
+        view: getViewFullSignature(view)
+    }));
+}
+
 let onTouchListeners = {}
 let instrumentedViews = {}
 
@@ -85,20 +102,7 @@ function recordTouch(typename) {
 function recordKey(typename) {
     instrument(typename, 'dispatchKeyEvent', function (event) {
         if (isTopLevelDispatcher(this)) {
-            send(JSON.stringify({
-                event: 'KeyEvent',
-                downTime: event.getDownTime(),
-                eventTime: event.getEventTime(),
-                action: event.getAction(),
-                code: event.getKeyCode(),
-                repeat: event.getRepeatCount(),
-                metaState: event.getMetaState(),
-                deviceId: event.getDeviceId(),
-                scancode: event.getScanCode(),
-                flags: event.getFlags(),
-                source: event.getSource(),
-                view: getViewFullSignature(this)
-            }));
+            sendKeyEvent(this, event)
         }
         return this.dispatchKeyEvent(event)
     });
