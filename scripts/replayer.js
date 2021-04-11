@@ -22,6 +22,7 @@ function replayCollectViews() {
 
 const MotionEvent = Java.use('android.view.MotionEvent')
 const KeyEvent = Java.use('android.view.KeyEvent')
+const MotionEventObtain = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'float', 'float', 'int', 'float', 'float', 'int', 'int')
 
 function replayMotionEvent(event) {
     const viewSignature = event['view']
@@ -29,17 +30,16 @@ function replayMotionEvent(event) {
     if (view) {
         //const location = Java.array('int', [0, 0])
         //view.getLocationOnScreen(location)
-        send('find view!')
+        // send('find view!')
         Java.scheduleOnMainThread(function () {
             const adjustedCoord = adjustCoordinates(view, event['x'], event['y'], event['width'], event['height'])
-            const motionEvent = MotionEvent.obtain.overload('long', 'long', 'int', 'float', 'float', 'float', 'float', 'int', 'float', 'float', 'int', 'int')
-                .call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
+            const motionEvent = MotionEventObtain.call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
                     event['action'], adjustedCoord.x, adjustedCoord.y, event['pressure'], event['size'],
                     event['metaState'], event['xPrecision'], event['yPrecision'], event['deviceId'], event['edgeFlags'])
             view.onTouchEvent(motionEvent)
         })
     } else {
-        send('view not found!')
+        send('view not found! ' + viewSignature)
     }
     return view !== undefined
 }
