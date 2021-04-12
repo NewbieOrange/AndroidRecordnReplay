@@ -40,8 +40,22 @@ function sendKeyEvent(view, event) {
     }));
 }
 
+function sendLocationEvent(listener, provider, location) {
+    const locationResult = {
+        event: 'LocationEvent',
+        provider: provider,
+        longitude: location.getLongitude(),
+        latitude: location.getLatitude(),
+        bearing: location.getBearing(),
+        speed: location.getSpeed(),
+        altitude: location.getAltitude(),
+        accuracy: location.getAccuracy(),
+        listener: listener
+    }
+    send(JSON.stringify(locationResult))
+}
+
 let onTouchListeners = {}
-let instrumentedViews = {}
 
 function RegisterClassOnTouchListener() {
     return Java.registerClass({
@@ -112,7 +126,7 @@ function recordLocation() {
     // 1. instrument active location polling
     instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
         const location = this.getLastKnownLocation(provider)
-        send(location.toString())
+        sendLocationEvent('', provider, location)
         return location
     });
     // 2. instrument loaded passive location listeners
@@ -141,16 +155,7 @@ function recordLocation() {
 
 function recordLocationListener(className) {
     instrument(className, 'onLocationChanged', function (location) {
-        const locationResult = {
-            longitude: location.getLongitude(),
-            latitude: location.getLatitude(),
-            bearing: location.getBearing(),
-            speed: location.getSpeed(),
-            altitude: location.getAltitude(),
-            accuracy: location.getAccuracy(),
-            listener: className
-        }
-        send('LocationResult ' + JSON.stringify(locationResult))
+        sendLocationEvent(className, '', location)
         return this.onLocationChanged(location)
     })
 }

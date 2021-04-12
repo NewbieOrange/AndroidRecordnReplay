@@ -53,8 +53,11 @@ class Replayer:
                 if self.raw or not self.rpc.replay_key_event(event):  # widget failed, fallback to adb shell input
                     if event['action'] == 0:
                         self.u2_device.keyevent(str(event['code']))
-            elif event.startswith('LocationResult'):
-                self.rpc.replay_location(event)
+            elif event['event'] == 'LocationEvent':
+                if event['provider']:
+                    self.rpc.set_replay_location_active(event['provider'], event)
+                else:
+                    self.rpc.set_replay_location_passive(event['listener'], event)
             last_time = event_time
         time.sleep(1)
 

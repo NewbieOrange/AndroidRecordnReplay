@@ -62,47 +62,75 @@ function replayKeyEvent(event) {
     return view !== undefined
 }
 
-function replayLocationActive(data) {
+const locationProvider = {}, locationListener = {}
+
+function replayLocationActive() {
     instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
-        const location = this.getLastKnownLocation(provider);
+        const location = this.getLastKnownLocation(provider)
         if (location === null) {
-            return location;
+            return location
         }
-        if (data.hasOwnProperty(provider)) {
-            let index = data[provider].index;
-            if (index >= data[provider].values.length) {
-                index = data[provider].values.length - 1;
-            }
-            const value = data[provider].values[index];
-            location.mLatitude = value.latitude;
-            location.mLongitude = value.longitude;
-            location.mBearing = value.bearing;
-            location.mSpeed = value.speed;
-            location.mAltitude = value.altitude;
-            location.mAccuracy = value.accuracy;
+        const value = locationProvider[provider]
+        if (value) {
+            location.mLatitude = value.latitude
+            location.mLongitude = value.longitude
+            location.mBearing = value.bearing
+            location.mSpeed = value.speed
+            location.mAltitude = value.altitude
+            location.mAccuracy = value.accuracy
         }
         return location
     });
 }
 
-function replayLocationPassive(className, data) {
+function replayLocationPassive(className) {
     instrument(className, 'onLocationChanged', function (location) {
         if (location === null) {
             return null
         }
-        let index = data.index;
-        if (index >= data.values.length) {
-            index = data.values.length - 1;
-        }
-        const value = data.values[index];
-        location.mLatitude = value.latitude;
-        location.mLongitude = value.longitude;
-        location.mBearing = value.bearing;
-        location.mSpeed = value.speed;
-        location.mAltitude = value.altitude;
-        location.mAccuracy = value.accuracy;
+        const value = locationListener[className]
+        location.mLatitude = value.latitude
+        location.mLongitude = value.longitude
+        location.mBearing = value.bearing
+        location.mSpeed = value.speed
+        location.mAltitude = value.altitude
+        location.mAccuracy = value.accuracy
         return this.onLocationChanged(location)
     });
+}
+
+function replayLocationPassiveAll() {
+    const classLocationListener = Class.forName('android.location.LocationListener')
+    Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+        onMatch(name, handle) {
+            if (!name.startsWith('android.')) { // skip Android library classes
+                const classHandle = Java.cast(handle, Class)
+                if (classLocationListener.isAssignableFrom(classHandle)) {
+                    replayLocationPassive(name)
+                }
+            }
+        },
+        onComplete() {
+            send('-- Location instrumentation finished')
+        }
+    })
+    instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
+        replayLocationPassive(listener.$className)
+        return this.requestLocationUpdates(provider, minTime, minDistance, listener)
+    });
+}
+
+function replayLocation() {
+    replayLocationActive()
+    replayLocationPassiveAll()
+}
+
+function setReplayLocationActive(provider, value) {
+    locationProvider[provider] = value
+}
+
+function setReplayLocationPassive(listener, value) {
+    locationListener[listener] = value
 }
 
 function replaySensor(className, event) {
@@ -113,7 +141,7 @@ rpc.exports = {
     replayCollectViews,
     replayMotionEvent,
     replayKeyEvent,
-    replayLocationActive,
-    replayLocationPassive,
-    replaySensor
+    replayLocation,
+    setReplayLocationActive,
+    setReplayLocationPassive
 }
