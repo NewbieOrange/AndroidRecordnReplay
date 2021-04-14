@@ -50,7 +50,8 @@ function sendLocationEvent(listener, provider, location) {
         speed: location.getSpeed(),
         altitude: location.getAltitude(),
         accuracy: location.getAccuracy(),
-        listener: listener
+        listener: listener,
+        eventTime: SystemClock.uptimeMillis()
     }
     send(JSON.stringify(locationResult))
 }
@@ -154,7 +155,7 @@ function recordLocation() {
 }
 
 function recordLocationListener(className) {
-    instrument(className, 'onLocationChanged', function (location) {
+    instrumentOverload(className, 'onLocationChanged', ['android.location.Location'], function (location) {
         sendLocationEvent(className, '', location)
         return this.onLocationChanged(location)
     })

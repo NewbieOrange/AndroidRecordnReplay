@@ -34,8 +34,8 @@ function replayMotionEvent(event) {
         Java.scheduleOnMainThread(function () {
             const adjustedCoord = adjustCoordinates(view, event['x'], event['y'], event['width'], event['height'])
             const motionEvent = MotionEventObtain.call(MotionEvent, Long.parseLong(event['downTime']), Long.parseLong(event['eventTime']),
-                    event['action'], adjustedCoord.x, adjustedCoord.y, event['pressure'], event['size'],
-                    event['metaState'], event['xPrecision'], event['yPrecision'], event['deviceId'], event['edgeFlags'])
+                event['action'], adjustedCoord.x, adjustedCoord.y, event['pressure'], event['size'],
+                event['metaState'], event['xPrecision'], event['yPrecision'], event['deviceId'], event['edgeFlags'])
             view.onTouchEvent(motionEvent)
         })
     } else {
@@ -56,8 +56,8 @@ function replayKeyEvent(event) {
                     event['scancode'], event['flags'], event['source'])
             view.dispatchKeyEvent(keyEvent)
         })
-    // } else {
-    //     send('view not found!')
+        // } else {
+        //     send('view not found!')
     }
     return view !== undefined
 }
@@ -72,12 +72,12 @@ function replayLocationActive() {
         }
         const value = locationProvider[provider]
         if (value) {
-            location.mLatitude = value.latitude
-            location.mLongitude = value.longitude
-            location.mBearing = value.bearing
-            location.mSpeed = value.speed
-            location.mAltitude = value.altitude
-            location.mAccuracy = value.accuracy
+            location.setLatitude(value.latitude)
+            location.setLongitude(value.longitude)
+            location.setBearing(value.bearing)
+            location.setSpeed(value.speed)
+            location.setAltitude(value.altitude)
+            location.setAccuracy(value.accuracy)
         }
         return location
     });
@@ -85,17 +85,10 @@ function replayLocationActive() {
 
 function replayLocationPassive(className) {
     instrument(className, 'onLocationChanged', function (location) {
-        if (location === null) {
-            return null
+        if (location.getProvider() === 'fake') {
+            location.setProvider('')
+            this.onLocationChanged(location)
         }
-        const value = locationListener[className]
-        location.mLatitude = value.latitude
-        location.mLongitude = value.longitude
-        location.mBearing = value.bearing
-        location.mSpeed = value.speed
-        location.mAltitude = value.altitude
-        location.mAccuracy = value.accuracy
-        return this.onLocationChanged(location)
     });
 }
 
@@ -107,6 +100,7 @@ function replayLocationPassiveAll() {
                 const classHandle = Java.cast(handle, Class)
                 if (classLocationListener.isAssignableFrom(classHandle)) {
                     replayLocationPassive(name)
+                    locationListener[name] = Java.retain(handle)
                 }
             }
         },
@@ -114,10 +108,13 @@ function replayLocationPassiveAll() {
             send('-- Location instrumentation finished')
         }
     })
-    instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
-        replayLocationPassive(listener.$className)
-        return this.requestLocationUpdates(provider, minTime, minDistance, listener)
-    });
+    Java.perform(() => {
+        instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
+            replayLocationPassive(listener.$className)
+            locationListener[listener.$className] = Java.retain(listener)
+            return this.requestLocationUpdates(provider, minTime, minDistance, listener)
+        });
+    })
 }
 
 function replayLocation() {
@@ -125,12 +122,31 @@ function replayLocation() {
     replayLocationPassiveAll()
 }
 
+const Location = Java.use('android.location.Location')
+
+function parseLocation(value) {
+    const location = Location.$new('fake')
+    location.setLatitude(value.latitude)
+    location.setLongitude(value.longitude)
+    location.setBearing(value.bearing)
+    location.setSpeed(value.speed)
+    location.setAltitude(value.altitude)
+    location.setAccuracy(value.accuracy)
+    return location
+}
+
 function setReplayLocationActive(provider, value) {
     locationProvider[provider] = value
 }
 
-function setReplayLocationPassive(listener, value) {
-    locationListener[listener] = value
+function setReplayLocationPassive(className, value) {
+    const listener = locationListener[className]
+    if (listener) {
+        listener.onLocationChanged(parseLocation(value))
+        send('find')
+    } else {
+        send('gps not found ' + className)
+    }
 }
 
 function replaySensor(className, event) {

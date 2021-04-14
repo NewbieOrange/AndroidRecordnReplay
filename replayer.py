@@ -24,6 +24,7 @@ class Replayer:
 
     def replay(self, data):
         self.rpc.replay_collect_views()
+        self.rpc.replay_location()
         self.frida_device.resume(self.pid)
         last_time = None
         for i in reversed(range(0, 3)):

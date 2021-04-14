@@ -10,6 +10,7 @@ const View = Java.use('android.view.View')
 const ViewGroup = Java.use('android.view.ViewGroup')
 const TextView = Java.use('android.widget.TextView')
 const ContextWrapper = Java.use('android.content.ContextWrapper')
+const SystemClock = Java.use('android.os.SystemClock')
 
 function instrumentOverload(typename, funcname, overload, impl) {
     Java.use(typename)[funcname].overload(...overload).implementation = impl;
