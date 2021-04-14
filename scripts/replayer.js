@@ -105,7 +105,7 @@ function replayLocationPassiveAll() {
             }
         },
         onComplete() {
-            send('-- Location instrumentation finished')
+            send('-- Collect location listeners instrument finished')
         }
     })
     Java.perform(() => {
@@ -132,6 +132,7 @@ function parseLocation(value) {
     location.setSpeed(value.speed)
     location.setAltitude(value.altitude)
     location.setAccuracy(value.accuracy)
+    location.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos())
     return location
 }
 
@@ -143,9 +144,6 @@ function setReplayLocationPassive(className, value) {
     const listener = locationListener[className]
     if (listener) {
         listener.onLocationChanged(parseLocation(value))
-        send('find')
-    } else {
-        send('gps not found ' + className)
     }
 }
 
