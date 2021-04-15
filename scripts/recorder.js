@@ -62,9 +62,6 @@ function RegisterClassOnTouchListener() {
     return Java.registerClass({
         name: 'xyz.chengzi.OnTouchListener',
         implements: [Java.use('android.view.View$OnTouchListener')],
-        fields: {
-            view: 'android.view.View'
-        },
         methods: {
             onTouch: function (v, event) {
                 const onTouchListener = onTouchListeners[v.hashCode()]
@@ -185,19 +182,17 @@ function recordSensorRegister() {
 }
 
 function recordSensorListener(className) {
-    const SensorEvent = Java.use('android.hardware.SensorEvent')
-    const valuesField = SensorEvent.getDeclaredField('values')
-    const sensorField = SensorEvent.getDeclaredField('sensor')
-    const accuracyField = SensorEvent.getDeclaredField('accuracy')
-    const timestampField = SensorEvent.getDeclaredField('timestamp')
     instrument(className, 'onSensorChanged', function (event) {
-        const sensorEvent = Object()
-        sensorEvent.values = javaArrayToString(Java.array('float', valuesField.get(event)))
-        sensorEvent.sensor = sensorField.get(event).toString()
-        sensorEvent.accuracy = accuracyField.get(event).toString()
-        sensorEvent.timestamp = timestampField.get(event).toString()
-        sensorEvent.listener = className
-        send('SensorEvent ' + JSON.stringify(sensorEvent))
+        const sensorEvent = {
+            event: 'SensorEvent',
+            values: event.values.value,
+            sensor: event.sensor.value.getType(),
+            accuracy: event.accuracy.value,
+            timestamp: event.timestamp.value,
+            listener: className,
+            eventTime: SystemClock.uptimeMillis()
+        }
+        send(JSON.stringify(sensorEvent))
         return this.onSensorChanged(event)
     })
 }

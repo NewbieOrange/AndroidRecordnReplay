@@ -5,12 +5,43 @@ const float = Class.getPrimitiveClass('float')
 const Long = Java.use('java.lang.Long')
 const Integer = Java.use('java.lang.Integer')
 const Float = Java.use('java.lang.Float')
+const Runnable = Java.use('java.lang.Runnable')
 const Activity = Java.use('android.app.Activity')
 const View = Java.use('android.view.View')
 const ViewGroup = Java.use('android.view.ViewGroup')
 const TextView = Java.use('android.widget.TextView')
 const ContextWrapper = Java.use('android.content.ContextWrapper')
 const SystemClock = Java.use('android.os.SystemClock')
+const Handler = Java.use('android.os.Handler')
+const Looper = Java.use('android.os.Looper')
+
+let mainHandler = undefined
+Java.perform(() => {
+    mainHandler = Handler.$new(Looper.getMainLooper())
+})
+
+function RegisterRunnable(className, arg1Type, arg2Type, func) {
+    return Java.registerClass({
+        name: className,
+        implements: [Runnable],
+        fields: {
+            arg1: arg1Type,
+            arg2: arg2Type
+        },
+        methods: {
+            $init: {
+                argumentTypes: [arg1Type, arg2Type],
+                implementation(arg1, arg2) {
+                    this.arg1.value = arg1
+                    this.arg2.value = arg2
+                }
+            },
+            run: function () {
+                func(this.arg1.value, this.arg2.value)
+            }
+        }
+    })
+}
 
 function instrumentOverload(typename, funcname, overload, impl) {
     Java.use(typename)[funcname].overload(...overload).implementation = impl;

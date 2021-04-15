@@ -93,21 +93,6 @@ function replayLocationPassive(className) {
 }
 
 function replayLocationPassiveAll() {
-    const classLocationListener = Class.forName('android.location.LocationListener')
-    Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
-        onMatch(name, handle) {
-            if (!name.startsWith('android.')) { // skip Android library classes
-                const classHandle = Java.cast(handle, Class)
-                if (classLocationListener.isAssignableFrom(classHandle)) {
-                    replayLocationPassive(name)
-                    locationListener[name] = Java.retain(handle)
-                }
-            }
-        },
-        onComplete() {
-            send('-- Collect location listeners instrument finished')
-        }
-    })
     Java.perform(() => {
         instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
             replayLocationPassive(listener.$className)
@@ -140,15 +125,67 @@ function setReplayLocationActive(provider, value) {
     locationProvider[provider] = value
 }
 
+let classLocationRunnable = undefined
+Java.perform(() => {
+    classLocationRunnable = RegisterRunnable('xyz.chengzi.LocationRunnable', 'android.location.LocationListener', 'android.location.Location', function (listener, location) {
+        listener.onLocationChanged(location)
+    })
+})
+
 function setReplayLocationPassive(className, value) {
     const listener = locationListener[className]
     if (listener) {
-        listener.onLocationChanged(parseLocation(value))
+        // listener.onLocationChanged(parseLocation(value))
+        mainHandler.post(classLocationRunnable.$new(listener, parseLocation(value)))
     }
 }
 
-function replaySensor(className, event) {
-    // TODO
+const sensorListener = {}
+
+function replaySensorPassive(className) {
+    instrument(className, 'onSensorChanged', function (event) {
+        if (event.timestamp.value <= 0) {
+            event.timestamp.value = SystemClock.elapsedRealtimeNanos()
+            this.onSensorChanged(event)
+        }
+    });
+}
+
+function replaySensorPassiveAll() {
+    instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
+        replaySensorPassive(listener.$className)
+        sensorListener[listener.$className] = Java.retain(listener)
+        return this.registerListener(listener, sensor, period)
+    });
+}
+
+function replaySensor() {
+    replaySensorPassiveAll()
+}
+
+const SensorEvent = Java.use('android.hardware.SensorEvent')
+
+function parseSensorEvent(value) {
+    const sensorEvent = SensorEvent.$new(value.values.length)
+    sensorEvent.values.value = Java.array('float', value.values)
+    sensorEvent.accuracy.value = value.accuracy
+    sensorEvent.timestamp.value = -1
+    return sensorEvent
+}
+
+let classSensorRunnable = undefined
+Java.perform(() => {
+    classSensorRunnable = RegisterRunnable('xyz.chengzi.SensorRunnable', 'android.hardware.SensorEventListener', 'android.hardware.SensorEvent', function (listener, event) {
+        listener.onSensorChanged(event)
+    })
+})
+
+function setReplaySensorPassive(className, value) {
+    const listener = sensorListener[className]
+    if (listener) {
+        // listener.onSensorChanged(parseSensorEvent(value))
+        mainHandler.post(classSensorRunnable.$new(listener, parseSensorEvent(value)))
+    }
 }
 
 rpc.exports = {
@@ -157,5 +194,7 @@ rpc.exports = {
     replayKeyEvent,
     replayLocation,
     setReplayLocationActive,
-    setReplayLocationPassive
+    setReplayLocationPassive,
+    replaySensor,
+    setReplaySensorPassive
 }

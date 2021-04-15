@@ -25,6 +25,7 @@ class Replayer:
     def replay(self, data):
         self.rpc.replay_collect_views()
         self.rpc.replay_location()
+        self.rpc.replay_sensor()
         self.frida_device.resume(self.pid)
         last_time = None
         for i in reversed(range(0, 3)):
@@ -59,6 +60,8 @@ class Replayer:
                     self.rpc.set_replay_location_active(event['provider'], event)
                 else:
                     self.rpc.set_replay_location_passive(event['listener'], event)
+            elif event['event'] == 'SensorEvent':
+                self.rpc.set_replay_sensor_passive(event['listener'], event)
             last_time = event_time
         time.sleep(1)
 
