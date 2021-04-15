@@ -207,6 +207,7 @@ function record() {
     recordKey('android.view.ViewGroup')
     recordLocation()
     recordSensorRegister()
+    send('{"event":"TimeEvent","eventTime":"' + SystemClock.uptimeMillis() + '"}')
     send('-- Record ready!')
 }
 

@@ -27,10 +27,11 @@ class Replayer:
         self.rpc.replay_location()
         self.rpc.replay_sensor()
         self.frida_device.resume(self.pid)
-        last_time = None
         for i in reversed(range(0, 3)):
             print('-- Waiting for views: %d' % i)
             time.sleep(1)
+        start_time = None
+        start_real_time = time.time()
         for event in data:
             if not event.startswith('{'):
                 continue
@@ -38,9 +39,10 @@ class Replayer:
             if event['event'] == 'DeviceInfo':
                 self.original_screen_width, self.original_screen_height = event['x'], event['y']
                 continue
-            # print(event)
-            event_time = int(event['eventTime'])
-            sleep_time = (event_time - last_time) / 1000 if last_time else 0
+            elif event['event'] == 'TimeEvent':
+                start_time = int(event['eventTime'])
+                continue
+            sleep_time = (int(event['eventTime']) - start_time) / 1000 - time.time() + start_real_time
             if sleep_time > 0:
                 time.sleep(sleep_time)
             if event['event'] == 'MotionEvent':
@@ -62,7 +64,6 @@ class Replayer:
                     self.rpc.set_replay_location_passive(event['listener'], event)
             elif event['event'] == 'SensorEvent':
                 self.rpc.set_replay_sensor_passive(event['listener'], event)
-            last_time = event_time
         time.sleep(1)
 
     def adjust_raw_coord(self, x, y):
