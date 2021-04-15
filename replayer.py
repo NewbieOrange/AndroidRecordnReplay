@@ -29,7 +29,7 @@ class Replayer:
         self.frida_device.resume(self.pid)
         last_time = None
         for i in reversed(range(0, 3)):
-            print('-- wait for views: %d' % i)
+            print('-- Waiting for views: %d' % i)
             time.sleep(1)
         for event in data:
             if not event.startswith('{'):

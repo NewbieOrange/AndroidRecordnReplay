@@ -67,7 +67,7 @@ function getViewChildSignature(view, depth) {
 function getViewParentSignature(view, depth) {
     let result = ''
     for (let i = 0; view && i < depth; i++) {
-        result += View.class.isInstance(view) ? getViewSignature(view) + '/' : '?'
+        result += View.class.isInstance(view) ? getViewSignature(view) + '/' : '?/'
         let viewParent = view.getParent()
         if (ViewGroup.class.isInstance(viewParent)) {
             const viewGroup = Java.cast(viewParent, ViewGroup)
@@ -103,7 +103,7 @@ function getViewSignature(view) {
     // if (TextView.class.isInstance(view)) {
     //     extra += ',' + Java.cast(view, TextView).getText()
     // }
-    return view.getId() + extra + '@' + view.getClass().getName()
+    return view.getId() + '#' + extra + '@' + view.getClass().getName()
 }
 
 function getViewActivity(view) {
