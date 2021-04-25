@@ -56,6 +56,19 @@ function sendLocationEvent(listener, provider, location) {
     send(JSON.stringify(locationResult))
 }
 
+function sendSensorEvent(listener, event) {
+    const sensorEvent = {
+        event: 'SensorEvent',
+        values: event.values.value,
+        sensor: event.sensor.value.getType(),
+        accuracy: event.accuracy.value,
+        timestamp: event.timestamp.value,
+        listener: listener,
+        eventTime: SystemClock.uptimeMillis()
+    }
+    send(JSON.stringify(sensorEvent))
+}
+
 let onTouchListeners = {}
 
 function RegisterClassOnTouchListener() {
@@ -100,6 +113,33 @@ function recordKey(typename) {
     });
 }
 
+let ClassLocationListenerStub = undefined
+const locationListenerStubs = {}
+
+function RegisterClassLocationListener() {
+    return Java.registerClass({
+        name: 'xyz.chengzi.LocationListener',
+        implements: [Java.use('android.location.LocationListener')],
+        fields: {
+            className: 'java.lang.String'
+        },
+        methods: {
+            $init: {
+                argumentTypes: ['java.lang.String'],
+                implementation(className) {
+                    this.className.value = className
+                }
+            },
+            onLocationChanged: function (location) {
+                sendLocationEvent(this.className.value, '', location)
+            },
+            onStatusChanged: function (provider, status, extras) {},
+            onProviderEnabled: function (provider) {},
+            onProviderDisabled: function (provider) {}
+        }
+    })
+}
+
 function recordLocation() {
     // 1. instrument active location polling
     instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
@@ -126,8 +166,21 @@ function recordLocation() {
     }
     // 3. instrument future passive location listener
     instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
-        recordLocationListener(listener.$className)
+        // recordLocationListener(listener.$className)
+        if (locationListenerStubs[listener.$className]) {
+            const stub = ClassLocationListenerStub.$new(listener.$className)
+            locationListenerStubs[listener.$className] = stub
+            this.requestLocationUpdates(provider, minTime, minDistance, stub)
+        }
         return this.requestLocationUpdates(provider, minTime, minDistance, listener)
+    });
+    instrumentOverload('android.location.LocationManager', 'removeUpdates', ['android.location.LocationListener'], function (listener) {
+        const stub = locationListenerStubs[listener.$className]
+        if (stub) {
+            delete locationListenerStubs[listener.$className]
+            this.removeUpdates(stub)
+        }
+        return this.removeUpdates(listener)
     });
 }
 
@@ -135,6 +188,31 @@ function recordLocationListener(className) {
     instrumentOverload(className, 'onLocationChanged', ['android.location.Location'], function (location) {
         sendLocationEvent(className, '', location)
         return this.onLocationChanged(location)
+    })
+}
+
+let ClassSensorEventListenerStub = undefined
+const sensorEventListenerStubs = {}
+
+function RegisterClassSensorEventListener() {
+    return Java.registerClass({
+        name: 'xyz.chengzi.SensorEventListener',
+        implements: [Java.use('android.hardware.SensorEventListener')],
+        fields: {
+            className: 'java.lang.String'
+        },
+        methods: {
+            $init: {
+                argumentTypes: ['java.lang.String'],
+                implementation(className) {
+                    this.className.value = className
+                }
+            },
+            onSensorChanged: function (event) {
+                sendSensorEvent(this.className.value, event)
+            },
+            onAccuracyChanged: function (sensor, accuracy) {}
+        }
     })
 }
 
@@ -156,23 +234,27 @@ function recordSensorRegister() {
         })
     }
     instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
-        recordSensorListener(listener.$className)
+        // recordSensorListener(listener.$className)
+        if (!sensorEventListenerStubs[listener.$className]) {
+            const stub = ClassSensorEventListenerStub.$new(listener.$className)
+            sensorEventListenerStubs[listener.$className] = stub
+            this.registerListener(stub, sensor, period)
+        }
         return this.registerListener(listener, sensor, period)
+    });
+    instrumentOverload('android.hardware.SensorManager', 'unregisterListener', ['android.hardware.SensorEventListener'], function (listener) {
+        const stub = sensorEventListenerStubs[listener.$className]
+        if (stub) {
+            delete sensorEventListenerStubs[listener.$className]
+            this.unregisterListener(stub)
+        }
+        return this.unregisterListener(listener)
     });
 }
 
 function recordSensorListener(className) {
     instrument(className, 'onSensorChanged', function (event) {
-        const sensorEvent = {
-            event: 'SensorEvent',
-            values: event.values.value,
-            sensor: event.sensor.value.getType(),
-            accuracy: event.accuracy.value,
-            timestamp: event.timestamp.value,
-            listener: className,
-            eventTime: SystemClock.uptimeMillis()
-        }
-        send(JSON.stringify(sensorEvent))
+        sendSensorEvent(className, event)
         return this.onSensorChanged(event)
     })
 }
@@ -181,6 +263,9 @@ function record() {
     Java.perform(() => {
         const ClassOnTouchListener = RegisterClassOnTouchListener()
         onTouchListenerStub = ClassOnTouchListener.$new()
+
+        ClassLocationListenerStub = RegisterClassLocationListener()
+        ClassSensorEventListenerStub = RegisterClassSensorEventListener()
     })
     recordTouch('android.view.View')
     recordKey('android.view.View')
