@@ -103,7 +103,7 @@ function getViewSignature(view) {
     // if (TextView.class.isInstance(view)) {
     //     extra += ',' + Java.cast(view, TextView).getText()
     // }
-    return view.getId() + '#' + extra + '@' + view.getClass().getName()
+    return view.getId() + '#' + extra + '@' + view.$className
 }
 
 function getViewActivity(view) {
