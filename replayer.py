@@ -33,9 +33,6 @@ class Replayer:
         start_time = None
         start_real_time = time.time()
         for event in data:
-            if not event.startswith('{'):
-                continue
-            event = json.loads(event)
             if event['event'] == 'DeviceInfo':
                 self.original_screen_width, self.original_screen_height = event['x'], event['y']
                 continue
@@ -84,8 +81,12 @@ def main():
     u2_device = u2.connect()
 
     replayer = Replayer(False, session, frida_device, pid, u2_device)
+    data = []
     with open(sys.argv[1], 'r', encoding='utf-8') as f:
-        replayer.replay(f.read().splitlines())
+        for line in f.read().splitlines():
+            if line.startswith('{'):
+                data.append(json.loads(line))
+    replayer.replay(data)
 
 
 if __name__ == '__main__':
