@@ -27,7 +27,10 @@ class Recorder:
         with open('scripts/recorder.js', 'r') as f:
             s = script.Script(self.session, f.read())
         s.set_on_message(self.on_message)
-        s.rpc.record()
+        s.rpc.record_touch_and_key()
+        s.rpc.record_location()
+        s.rpc.record_sensor()
+        s.rpc.record_time_sync()
 
     def record_events(self):
         self.stream = self.device.shell('getevent -tt', stream=True)

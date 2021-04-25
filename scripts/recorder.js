@@ -133,14 +133,20 @@ function RegisterClassLocationListener() {
             onLocationChanged: function (location) {
                 sendLocationEvent(this.className.value, '', location)
             },
-            onStatusChanged: function (provider, status, extras) {},
-            onProviderEnabled: function (provider) {},
-            onProviderDisabled: function (provider) {}
+            onStatusChanged: function (provider, status, extras) {
+            },
+            onProviderEnabled: function (provider) {
+            },
+            onProviderDisabled: function (provider) {
+            }
         }
     })
 }
 
 function recordLocation() {
+    Java.perform(() => {
+        ClassLocationListenerStub = RegisterClassLocationListener()
+    })
     // 1. instrument active location polling
     instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
         const location = this.getLastKnownLocation(provider)
@@ -211,12 +217,16 @@ function RegisterClassSensorEventListener() {
             onSensorChanged: function (event) {
                 sendSensorEvent(this.className.value, event)
             },
-            onAccuracyChanged: function (sensor, accuracy) {}
+            onAccuracyChanged: function (sensor, accuracy) {
+            }
         }
     })
 }
 
-function recordSensorRegister() {
+function recordSensor() {
+    Java.perform(() => {
+        ClassSensorEventListenerStub = RegisterClassSensorEventListener()
+    })
     if (!earlyInstrument) {
         const SensorEventListener = Class.forName('android.hardware.SensorEventListener')
         Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
@@ -259,23 +269,25 @@ function recordSensorListener(className) {
     })
 }
 
-function record() {
+function recordTouchAndKey() {
     Java.perform(() => {
         const ClassOnTouchListener = RegisterClassOnTouchListener()
         onTouchListenerStub = ClassOnTouchListener.$new()
-
-        ClassLocationListenerStub = RegisterClassLocationListener()
-        ClassSensorEventListenerStub = RegisterClassSensorEventListener()
     })
     recordTouch('android.view.View')
     recordKey('android.view.View')
     recordKey('android.view.ViewGroup')
-    recordLocation()
-    recordSensorRegister()
+}
+
+// Call this function after all other `record` functions
+function recordTimeSync() {
     send('{"event":"TimeEvent","eventTime":"' + SystemClock.uptimeMillis() + '"}')
     send('-- Record ready!')
 }
 
 rpc.exports = {
-    record
+    recordTouchAndKey,
+    recordLocation,
+    recordSensor,
+    recordTimeSync
 }
