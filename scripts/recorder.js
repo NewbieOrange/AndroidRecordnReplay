@@ -89,26 +89,6 @@ function recordTouch(typename) {
             this.setOnTouchListener(listener)
         }
     })
-    // instrument(typename, 'onTouchEvent', function (event) {
-    //     sendMotionEvent(this, event)
-    //     return this.onTouchEvent(event)
-    // })
-    // instrumentOverload('android.view.View', 'onDraw', ['android.graphics.Canvas'], function (canvas) {
-    //     this.onDraw(canvas)
-    //     if (!instrumentedViews[this.hashCode()]) {
-    //         this.setOnTouchListener(onTouchListenerStub)
-    //     } else {
-    //         instrumentedViews[this.hashCode()] = true
-    //     }
-    // })
-    // instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
-    //     this.draw(canvas)
-    //     if (!instrumentedViews[this.hashCode()]) {
-    //         this.setOnTouchListener(onTouchListenerStub)
-    //     } else {
-    //         instrumentedViews[this.hashCode()] = true
-    //     }
-    // })
 }
 
 function recordKey(typename) {
@@ -160,7 +140,7 @@ function recordLocationListener(className) {
 
 function recordSensorRegister() {
     if (!earlyInstrument) {
-        const SensorEventListener = Java.use('android.hardware.SensorEventListener')
+        const SensorEventListener = Class.forName('android.hardware.SensorEventListener')
         Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
             onMatch(name, handle) {
                 if (!name.startsWith('android.')) { // skip Android library classes

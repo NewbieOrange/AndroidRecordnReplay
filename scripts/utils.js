@@ -95,7 +95,7 @@ function getViewFullSignature(view) {
     // if (activity) {
     //     result += activity.getTitle()
     // }
-    return getViewSignature(view) + '$' + getViewChildSignature(view, 2) + '+' + getViewParentSignature(view, 5)
+    return getViewSignature(view) + '$' + getViewChildSignature(view, 1) + '+' + getViewParentSignature(view, 3)
 }
 
 function getViewSignature(view) {
