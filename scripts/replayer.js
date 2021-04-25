@@ -2,21 +2,13 @@ let views = {}
 
 function replayCollectViews() {
     instrumentOverload('android.view.View', 'draw', ['android.graphics.Canvas'], function (canvas) {
-        this.draw(canvas)
         views[getViewFullSignature(this)] = Java.retain(this)
+        this.draw(canvas)
     })
     instrumentOverload('android.view.View', 'dispatchDraw', ['android.graphics.Canvas'], function (canvas) {
-        this.dispatchDraw(canvas)
         views[getViewFullSignature(this)] = Java.retain(this)
+        this.dispatchDraw(canvas)
     })
-    // instrumentOverload('android.view.View', 'setVisibility', ['int'], function (visibility) {
-    //     this.setVisibility(visibility)
-    //     if (visibility === 0) {
-    //         views[getViewFullSignature(this)] = Java.retain(this)
-    //     // } else {
-    //         // delete views[getViewFullSignature(this)]
-    //     }
-    // })
     send('-- Collect views instrument finished')
 }
 
