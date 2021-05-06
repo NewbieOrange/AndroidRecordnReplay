@@ -48,8 +48,8 @@ function replayKeyEvent(event) {
                     event['scancode'], event['flags'], event['source'])
             view.dispatchKeyEvent(keyEvent)
         })
-        // } else {
-        //     send('view not found!')
+    } else {
+        send('view not found!')
     }
     return view !== undefined
 }
