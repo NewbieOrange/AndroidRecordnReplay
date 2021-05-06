@@ -41,17 +41,29 @@ function sendKeyEvent(view, event) {
 }
 
 function sendLocationEvent(listener, provider, location) {
-    const locationResult = {
-        event: 'LocationEvent',
-        provider: provider,
-        longitude: location.getLongitude(),
-        latitude: location.getLatitude(),
-        bearing: location.getBearing(),
-        speed: location.getSpeed(),
-        altitude: location.getAltitude(),
-        accuracy: location.getAccuracy(),
-        listener: listener,
-        eventTime: SystemClock.uptimeMillis()
+    let locationResult
+    if (location) {
+        locationResult = {
+            event: 'LocationEvent',
+            provider: provider,
+            longitude: location.getLongitude(),
+            latitude: location.getLatitude(),
+            bearing: location.getBearing(),
+            speed: location.getSpeed(),
+            altitude: location.getAltitude(),
+            accuracy: location.getAccuracy(),
+            listener: listener,
+            eventTime: SystemClock.uptimeMillis(),
+            nullInput: false
+        }
+    } else {
+        locationResult = {
+            event: 'LocationEvent',
+            provider: provider,
+            listener: listener,
+            eventTime: SystemClock.uptimeMillis(),
+            nullInput: true
+        }
     }
     send(JSON.stringify(locationResult))
 }

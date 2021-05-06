@@ -64,6 +64,9 @@ function replayLocationActive() {
         }
         const value = locationProvider[provider]
         if (value) {
+            if (value.nullInput) {
+                return null
+            }
             location.setLatitude(value.latitude)
             location.setLongitude(value.longitude)
             location.setBearing(value.bearing)
@@ -102,6 +105,9 @@ function replayLocation() {
 const Location = Java.use('android.location.Location')
 
 function parseLocation(value) {
+    if (value.nullInput) {
+        return null
+    }
     const location = Location.$new('fake')
     location.setLatitude(value.latitude)
     location.setLongitude(value.longitude)
