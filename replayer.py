@@ -23,7 +23,8 @@ class Replayer:
         self.rpc = s.rpc
 
     def replay(self, data):
-        self.rpc.replay_collect_views()
+        if not self.raw:
+            self.rpc.replay_collect_views()
         self.rpc.replay_location()
         self.rpc.replay_sensor()
         self.frida_device.resume(self.pid)
