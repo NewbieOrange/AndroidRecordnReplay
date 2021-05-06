@@ -53,7 +53,7 @@ class Recorder:
     def close(self):
         self.script.rpc.flush_buffer()
         self.session.detach()
-        self.stream.close()
+        # self.stream.close()
 
 
 def main(argv):
