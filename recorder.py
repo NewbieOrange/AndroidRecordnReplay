@@ -12,6 +12,7 @@ class Recorder:
     def __init__(self, session: frida.core.Session, device: adbutils.AdbDevice):
         self.session = session
         self.device = device
+        self.script = None
         self.stream = None
 
     def record(self):
@@ -25,12 +26,12 @@ class Recorder:
 
     def record_frida(self):
         with open('scripts/recorder.js', 'r') as f:
-            s = script.Script(self.session, f.read())
-        s.set_on_message(self.on_message)
-        s.rpc.record_touch_and_key()
-        s.rpc.record_location()
-        s.rpc.record_sensor()
-        s.rpc.record_time_sync()
+            self.script = script.Script(self.session, f.read())
+        self.script.set_on_message(self.on_message)
+        self.script.rpc.record_touch_and_key()
+        self.script.rpc.record_location()
+        self.script.rpc.record_sensor()
+        self.script.rpc.record_time_sync()
 
     def record_events(self):
         self.stream = self.device.shell('getevent -tt', stream=True)
@@ -45,11 +46,12 @@ class Recorder:
 
     def on_message(self, msg: dict, _):
         if msg['type'] == 'send':
-            logging.info(msg['payload'])
+            logging.info(msg['payload'].rstrip('\n'))
         else:
             logging.info(msg)
 
     def close(self):
+        self.script.rpc.flush_buffer()
         self.session.detach()
         self.stream.close()
 
@@ -59,7 +61,7 @@ def main():
         level=logging.INFO,
         format='%(message)s',
         handlers=[
-            logging.FileHandler(sys.argv[1], 'w', encoding='utf-8'),
+            logging.FileHandler(argv[0], 'w', encoding='utf-8'),
             logging.StreamHandler(sys.stdout)
         ]
     )
@@ -73,7 +75,8 @@ def main():
     recorder.record()
     frida_device.resume(pid)
 
-    sys.stdin.read()
+    sys.stdin.read()  # Wait for exit
+    recorder.close()
 
 
 if __name__ == '__main__':

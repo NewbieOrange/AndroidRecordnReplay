@@ -1,7 +1,7 @@
 const earlyInstrument = true
 
 function sendMotionEvent(view, event) {
-    send(JSON.stringify({
+    sendBuffered(JSON.stringify({
         event: 'MotionEvent',
         downTime: event.getDownTime(),
         eventTime: event.getEventTime(),
@@ -24,7 +24,7 @@ function sendMotionEvent(view, event) {
 }
 
 function sendKeyEvent(view, event) {
-    send(JSON.stringify({
+    sendBuffered(JSON.stringify({
         event: 'KeyEvent',
         downTime: event.getDownTime(),
         eventTime: event.getEventTime(),
@@ -65,7 +65,7 @@ function sendLocationEvent(listener, provider, location) {
             nullInput: true
         }
     }
-    send(JSON.stringify(locationResult))
+    sendBuffered(JSON.stringify(locationResult))
 }
 
 function sendSensorEvent(listener, event) {
@@ -78,7 +78,7 @@ function sendSensorEvent(listener, event) {
         listener: listener,
         eventTime: SystemClock.uptimeMillis()
     }
-    send(JSON.stringify(sensorEvent))
+    sendBuffered(JSON.stringify(sensorEvent))
 }
 
 let onTouchListeners = {}
@@ -301,5 +301,6 @@ rpc.exports = {
     recordTouchAndKey,
     recordLocation,
     recordSensor,
-    recordTimeSync
+    recordTimeSync,
+    flushBuffer
 }

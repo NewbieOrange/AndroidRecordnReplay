@@ -160,3 +160,17 @@ function dumpJavaObject(object) {
     })
     return jsObject
 }
+
+let messageBuffer = ''
+
+function sendBuffered(message) {
+    messageBuffer += message + '\n'
+    if (messageBuffer.length > 1024) {
+        send(messageBuffer)
+        messageBuffer = ''
+    }
+}
+
+function flushBuffer() {
+    send(messageBuffer)
+}
