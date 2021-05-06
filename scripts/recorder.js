@@ -103,9 +103,13 @@ function RegisterClassOnTouchListener() {
 let onTouchListenerStub = undefined
 
 function recordTouch(typename) {
-    instrumentOverload(typename, '$init', ['android.content.Context'], function (context) {
-        this.setOnTouchListener(onTouchListenerStub)
-        return this.$init(context)
+    Java.perform(() => {
+        const ClassOnTouchListener = RegisterClassOnTouchListener()
+        onTouchListenerStub = ClassOnTouchListener.$new()
+        instrumentOverload(typename, '$init', ['android.content.Context'], function (context) {
+            this.setOnTouchListener(onTouchListenerStub)
+            return this.$init(context)
+        })
     })
     instrument(typename, 'setOnTouchListener', function (listener) {
         if (listener && !onTouchListenerStub.equals(listener)) {
@@ -282,10 +286,6 @@ function recordSensorListener(className) {
 }
 
 function recordTouchAndKey() {
-    Java.perform(() => {
-        const ClassOnTouchListener = RegisterClassOnTouchListener()
-        onTouchListenerStub = ClassOnTouchListener.$new()
-    })
     recordTouch('android.view.View')
     recordKey('android.view.View')
     recordKey('android.view.ViewGroup')
