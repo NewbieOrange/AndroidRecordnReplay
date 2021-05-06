@@ -164,48 +164,49 @@ function RegisterClassLocationListener() {
 function recordLocation() {
     Java.perform(() => {
         ClassLocationListenerStub = RegisterClassLocationListener()
-    })
-    // 1. instrument active location polling
-    instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
-        const location = this.getLastKnownLocation(provider)
-        sendLocationEvent('', provider, location)
-        return location
-    });
-    // 2. instrument loaded passive location listeners
-    if (!earlyInstrument) {
-        const classLocationListener = Class.forName('android.location.LocationListener')
-        Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
-            onMatch(name, handle) {
-                if (!name.startsWith('android.')) { // skip Android library classes
-                    const classHandle = Java.cast(handle, Class)
-                    if (classLocationListener.isAssignableFrom(classHandle)) {
-                        recordLocationListener(name)
+
+        // 1. instrument active location polling
+        instrument('android.location.LocationManager', 'getLastKnownLocation', function (provider) {
+            const location = this.getLastKnownLocation(provider)
+            sendLocationEvent('', provider, location)
+            return location
+        });
+        // 2. instrument loaded passive location listeners
+        if (!earlyInstrument) {
+            const classLocationListener = Class.forName('android.location.LocationListener')
+            Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+                onMatch(name, handle) {
+                    if (!name.startsWith('android.')) { // skip Android library classes
+                        const classHandle = Java.cast(handle, Class)
+                        if (classLocationListener.isAssignableFrom(classHandle)) {
+                            recordLocationListener(name)
+                        }
                     }
+                },
+                onComplete() {
+                    send('-- Location instrumentation finished')
                 }
-            },
-            onComplete() {
-                send('-- Location instrumentation finished')
+            })
+        }
+        // 3. instrument future passive location listener
+        instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
+            // recordLocationListener(listener.$className)
+            if (locationListenerStubs[listener.$className]) {
+                const stub = ClassLocationListenerStub.$new(listener.$className)
+                locationListenerStubs[listener.$className] = stub
+                this.requestLocationUpdates(provider, minTime, minDistance, stub)
             }
-        })
-    }
-    // 3. instrument future passive location listener
-    instrumentOverload('android.location.LocationManager', 'requestLocationUpdates', ['java.lang.String', 'long', 'float', 'android.location.LocationListener'], function (provider, minTime, minDistance, listener) {
-        // recordLocationListener(listener.$className)
-        if (locationListenerStubs[listener.$className]) {
-            const stub = ClassLocationListenerStub.$new(listener.$className)
-            locationListenerStubs[listener.$className] = stub
-            this.requestLocationUpdates(provider, minTime, minDistance, stub)
-        }
-        return this.requestLocationUpdates(provider, minTime, minDistance, listener)
-    });
-    instrumentOverload('android.location.LocationManager', 'removeUpdates', ['android.location.LocationListener'], function (listener) {
-        const stub = locationListenerStubs[listener.$className]
-        if (stub) {
-            delete locationListenerStubs[listener.$className]
-            this.removeUpdates(stub)
-        }
-        return this.removeUpdates(listener)
-    });
+            return this.requestLocationUpdates(provider, minTime, minDistance, listener)
+        });
+        instrumentOverload('android.location.LocationManager', 'removeUpdates', ['android.location.LocationListener'], function (listener) {
+            const stub = locationListenerStubs[listener.$className]
+            if (stub) {
+                delete locationListenerStubs[listener.$className]
+                this.removeUpdates(stub)
+            }
+            return this.removeUpdates(listener)
+        });
+    })
 }
 
 function recordLocationListener(className) {
@@ -244,40 +245,41 @@ function RegisterClassSensorEventListener() {
 function recordSensor() {
     Java.perform(() => {
         ClassSensorEventListenerStub = RegisterClassSensorEventListener()
-    })
-    if (!earlyInstrument) {
-        const SensorEventListener = Class.forName('android.hardware.SensorEventListener')
-        Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
-            onMatch(name, handle) {
-                if (!name.startsWith('android.')) { // skip Android library classes
-                    const classHandle = Java.cast(handle, Class)
-                    if (SensorEventListener.isAssignableFrom(classHandle)) {
-                        recordSensorListener(name)
+
+        if (!earlyInstrument) {
+            const SensorEventListener = Class.forName('android.hardware.SensorEventListener')
+            Java.enumerateLoadedClasses({ // instrument already loaded (and probably registered) listeners
+                onMatch(name, handle) {
+                    if (!name.startsWith('android.')) { // skip Android library classes
+                        const classHandle = Java.cast(handle, Class)
+                        if (SensorEventListener.isAssignableFrom(classHandle)) {
+                            recordSensorListener(name)
+                        }
                     }
+                },
+                onComplete() {
+                    send('-- Sensor instrumentation finished')
                 }
-            },
-            onComplete() {
-                send('-- Sensor instrumentation finished')
+            })
+        }
+        instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
+            // recordSensorListener(listener.$className)
+            if (!sensorEventListenerStubs[listener.$className]) {
+                const stub = ClassSensorEventListenerStub.$new(listener.$className)
+                sensorEventListenerStubs[listener.$className] = stub
+                this.registerListener(stub, sensor, period)
             }
-        })
-    }
-    instrumentOverload('android.hardware.SensorManager', 'registerListener', ['android.hardware.SensorEventListener', 'android.hardware.Sensor', 'int'], function (listener, sensor, period) {
-        // recordSensorListener(listener.$className)
-        if (!sensorEventListenerStubs[listener.$className]) {
-            const stub = ClassSensorEventListenerStub.$new(listener.$className)
-            sensorEventListenerStubs[listener.$className] = stub
-            this.registerListener(stub, sensor, period)
-        }
-        return this.registerListener(listener, sensor, period)
-    });
-    instrumentOverload('android.hardware.SensorManager', 'unregisterListener', ['android.hardware.SensorEventListener'], function (listener) {
-        const stub = sensorEventListenerStubs[listener.$className]
-        if (stub) {
-            delete sensorEventListenerStubs[listener.$className]
-            this.unregisterListener(stub)
-        }
-        return this.unregisterListener(listener)
-    });
+            return this.registerListener(listener, sensor, period)
+        });
+        instrumentOverload('android.hardware.SensorManager', 'unregisterListener', ['android.hardware.SensorEventListener'], function (listener) {
+            const stub = sensorEventListenerStubs[listener.$className]
+            if (stub) {
+                delete sensorEventListenerStubs[listener.$className]
+                this.unregisterListener(stub)
+            }
+            return this.unregisterListener(listener)
+        });
+    })
 }
 
 function recordSensorListener(className) {
