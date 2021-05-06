@@ -107,7 +107,9 @@ function recordTouch(typename) {
         const ClassOnTouchListener = RegisterClassOnTouchListener()
         onTouchListenerStub = ClassOnTouchListener.$new()
         instrumentOverload(typename, '$init', ['android.content.Context'], function (context) {
-            this.setOnTouchListener(onTouchListenerStub)
+            if (!this.$className.startsWith('com.google.vr.sdk')) {
+                this.setOnTouchListener(onTouchListenerStub)
+            }
             return this.$init(context)
         })
     })
