@@ -73,16 +73,16 @@ class Replayer:
             print(msg)
 
 
-def main():
+def main(argv):
     frida_device = frida.get_usb_device()
-    pid = frida_device.spawn(sys.argv[2])
+    pid = frida_device.spawn(argv[1])
     session = frida_device.attach(pid)
     session.enable_jit()
     u2_device = u2.connect()
 
     replayer = Replayer(False, session, frida_device, pid, u2_device)
     data = []
-    with open(sys.argv[1], 'r', encoding='utf-8') as f:
+    with open(argv[0], 'r', encoding='utf-8') as f:
         for line in f.read().splitlines():
             if line.startswith('{'):
                 data.append(json.loads(line))
@@ -90,4 +90,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])

@@ -56,7 +56,7 @@ class Recorder:
         self.stream.close()
 
 
-def main():
+def main(argv):
     logging.basicConfig(
         level=logging.INFO,
         format='%(message)s',
@@ -67,7 +67,7 @@ def main():
     )
 
     frida_device = frida.get_usb_device()
-    pid = frida_device.spawn(sys.argv[2])
+    pid = frida_device.spawn(argv[1])
     session = frida_device.attach(pid)
     session.enable_jit()
     adb_device = adb.device()
@@ -80,4 +80,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
