@@ -108,7 +108,7 @@ function recordTouch(typename) {
         return this.$init(context)
     })
     instrument(typename, 'setOnTouchListener', function (listener) {
-        if (!onTouchListenerStub.equals(listener)) {
+        if (listener && !onTouchListenerStub.equals(listener)) {
             onTouchListeners[this.hashCode()] = Java.retain(listener)
         } else {
             this.setOnTouchListener(listener)
