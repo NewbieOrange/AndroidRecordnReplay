@@ -66,7 +66,8 @@ class Replayer:
         time.sleep(1)
 
     def adjust_raw_coord(self, x, y):
-        return x * self.screen_width / self.original_screen_width, y * self.screen_height / self.original_screen_height
+        return max(0, x * self.screen_width / self.original_screen_width), \
+               max(0, y * self.screen_height / self.original_screen_height)
 
     def on_message(self, msg: dict, _):
         if msg['type'] == 'send':
