@@ -1,3 +1,4 @@
+import distutils.util
 import time
 import json
 import sys
@@ -83,7 +84,7 @@ def main(argv):
     session.enable_jit()
     u2_device = u2.connect()
 
-    replayer = Replayer(False, session, frida_device, pid, u2_device)
+    replayer = Replayer(bool(distutils.util.strtobool(argv[2])), session, frida_device, pid, u2_device)
     data = []
     with open(argv[0], 'r', encoding='utf-8') as f:
         for line in f.read().splitlines():
