@@ -62,6 +62,7 @@ class Replayer:
                     self.rpc.set_replay_location_passive(event['listener'], event)
             elif event['event'] == 'SensorEvent':
                 self.rpc.set_replay_sensor_passive(event['listener'], event)
+        print('Replay time: ' + str(time.time() - start_real_time) + 's')
         time.sleep(1)
 
     def adjust_raw_coord(self, x, y):
