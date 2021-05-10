@@ -28,9 +28,9 @@ class Replayer:
         self.rpc.replay_location()
         self.rpc.replay_sensor()
         self.frida_device.resume(self.pid)
-        for i in reversed(range(0, 3)):
-            print('-- Waiting for views: %d' % i)
-            time.sleep(1)
+        # for i in reversed(range(0, 3)):
+        #     print('-- Waiting for views: %d' % i)
+        #     time.sleep(1)
         start_time = None
         start_real_time = time.time()
         for event in data:
