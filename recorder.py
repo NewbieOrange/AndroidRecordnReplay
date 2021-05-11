@@ -75,7 +75,8 @@ def main(argv):
     recorder.record()
     frida_device.resume(pid)
 
-    sys.stdin.read()  # Wait for exit
+    print('Press ENTER to stop recording')
+    sys.stdin.readline()  # Wait for exit
     recorder.close()
 
 
